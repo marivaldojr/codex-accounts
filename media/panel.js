@@ -131,27 +131,27 @@
   function accountNode(profile, busy) {
     const node = el('article', profile.active ? 'account active' : 'account');
 
+    const free = runway(profile);
+    const level = severity(free);
+
+    // The figure rides the name row rather than owning a line of its own: on a
+    // sidebar, vertical space is the budget, and both are read in one glance.
     const head = el('div', 'account-head');
     head.append(el('span', 'name', profile.label));
     if (profile.active) {
       head.append(el('span', 'active-tag', 'in use'));
     }
+    head.append(el('span', 'spacer'));
+    head.append(el('span', `figure ${level}`, free === null ? '—' : `${100 - free}%`));
+    if (free !== null) {
+      head.append(el('span', 'figure-label', 'used'));
+    }
     node.append(head);
 
-    if (profile.email) {
-      node.append(el('div', 'email', profile.email));
+    const meta = [profile.email, profile.planType && profile.planType.toUpperCase()].filter(Boolean);
+    if (meta.length > 0) {
+      node.append(el('div', 'meta-line', meta.join(' · ')));
     }
-
-    const free = runway(profile);
-    const level = severity(free);
-
-    const headline = el('div', 'headline');
-    headline.append(el('span', `figure ${level}`, free === null ? '—' : `${100 - free}%`));
-    headline.append(el('span', 'figure-label', free === null ? 'no reading' : 'used'));
-    if (profile.planType) {
-      headline.append(el('span', 'plan', profile.planType));
-    }
-    node.append(headline);
 
     // Figure and bar both read as consumption, so they never disagree. Colour
     // still keys off what remains, so the bar fills and reddens together.

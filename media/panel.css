@@ -77,7 +77,7 @@ body {
 
 .account {
   position: relative;
-  padding: 14px 0 14px 12px;
+  padding: 10px 0 11px 12px;
   border-top: 1px solid var(--rule);
 }
 
@@ -85,8 +85,8 @@ body {
   content: '';
   position: absolute;
   left: 0;
-  top: 14px;
-  bottom: 14px;
+  top: 10px;
+  bottom: 11px;
   width: var(--rail);
   border-radius: var(--rail);
   background: var(--faint);
@@ -100,6 +100,20 @@ body {
   display: flex;
   align-items: baseline;
   gap: 6px;
+}
+
+.account-head .spacer {
+  flex: 1;
+}
+
+/* Email and plan share a line: two quiet facts do not deserve two rows. */
+.meta-line {
+  font-size: 11px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 0 6px;
 }
 
 .name {
@@ -116,29 +130,16 @@ body {
   color: var(--ok);
 }
 
-.email {
-  font-size: 11px;
-  color: var(--faint);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-top: 2px;
-}
 
-/* ---------- headline ---------- */
+/* ---------- figure ---------- */
 
-.headline {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 8px 0 5px;
-}
 
 .figure {
-  font-size: 26px;
+  font-size: 19px;
   font-weight: 300;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .figure.ok { color: var(--ok); }
@@ -151,13 +152,6 @@ body {
   color: var(--muted);
 }
 
-.plan {
-  margin-left: auto;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 
 .track {
   height: 3px;
@@ -179,7 +173,7 @@ body {
 
 .windows {
   list-style: none;
-  margin: 9px 0 0;
+  margin: 7px 0 0;
   padding: 0;
 }
 
@@ -212,7 +206,7 @@ body {
   font-size: 10px;
   letter-spacing: 0.04em;
   color: var(--faint);
-  padding: 7px 0 1px;
+  padding: 6px 0 0;
 }
 
 .family::before {
@@ -222,7 +216,7 @@ body {
 .note {
   font-size: 10px;
   color: var(--faint);
-  padding-top: 9px;
+  padding-top: 7px;
 }
 
 .note.error {
@@ -234,7 +228,7 @@ body {
 .actions {
   display: flex;
   gap: 2px;
-  padding-top: 9px;
+  padding-top: 7px;
   margin-left: -6px;
 }
 
