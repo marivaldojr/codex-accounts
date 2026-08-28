@@ -150,9 +150,12 @@
     }
     node.append(headline);
 
+    // The bar fills with what was consumed while the figure states what is left
+    // — the disk-gauge pairing, where a filling track and a "free" label read as
+    // one thing. Colour still follows what remains, so it warns as room runs out.
     const track = el('div', `track ${level}`);
     const fill = el('span');
-    fill.style.width = `${free === null ? 0 : free}%`;
+    fill.style.width = `${free === null ? 0 : 100 - free}%`;
     track.append(fill);
     node.append(track);
 
