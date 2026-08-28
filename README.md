@@ -22,7 +22,8 @@ just to find out how much is left on each.
 - **Isolated usage reads:** each account's limits are queried in a throwaway
   `CODEX_HOME`, so checking usage does **not** switch the active account or
   invalidate a session in progress.
-- **Login** from a terminal (`codex login`) without leaving the editor.
+- **Login** from a terminal (`codex login`) without leaving the editor, with
+  the account you were on saved and kept valid rather than revoked.
 
 ## How it works
 
@@ -95,6 +96,15 @@ again. Pressing **+ Save current account** is what takes it off that list.
   reads and rewrites it directly for whichever account is active, and captures
   the signed-in account before starting a login, since `codex login` overwrites
   the file and the tokens it overwrites cannot be recovered.
+
+- **A login no longer signs the previous account out.** `codex login` revokes
+  the credential it finds before it starts the new flow — it posts the stored
+  refresh token to `/oauth/revoke`, so the account you were on dies server-side
+  and the saved copy dies with it. The panel's **Log in** button therefore
+  clears `auth.json` after capturing it: revocation reads the auth store and
+  does nothing when it is empty. The login flow itself is unchanged. (The
+  official extension's own login never had this step, which is why signing in
+  there leaves the other accounts alone.)
 
   What is still outside its reach: an account you have also signed into
   somewhere else (another machine, another `CODEX_HOME`) can be revoked from

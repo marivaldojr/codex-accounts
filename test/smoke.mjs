@@ -11,7 +11,7 @@ Module._resolveFilename = function (request, ...rest) {
 };
 
 const { readIdentity, isUsableAuth } = require('../out/identity.js');
-const { readAuth, resolveCodexHome } = require('../out/codex-home.js');
+const { readAuth, removeAuth, resolveCodexHome } = require('../out/codex-home.js');
 const { normalizeRateLimits, windowLabel, fetchUsage, describeFailure } = require('../out/usage.js');
 
 let failures = 0;
@@ -79,6 +79,31 @@ check('limits returned', () => assert.ok(snapshot.limits.length > 0));
 check('~/.codex/auth.json was NOT touched', () => assert.equal(JSON.stringify(readAuth()), before));
 for (const limit of snapshot.limits) {
   console.log(`       ${limit.limitName ?? limit.limitId}: ` + limit.windows.map(w => `${w.label} ${w.usedPercent}%`).join(' | '));
+}
+
+console.log('\nremoveAuth (throwaway CODEX_HOME, real module)');
+{
+  const fsp = await import('node:fs/promises');
+  const os = await import('node:os');
+  const nodePath = await import('node:path');
+
+  const home = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'codex-accounts-remove-'));
+  const target = nodePath.join(home, 'auth.json');
+  const stillReal = JSON.stringify(readAuth());
+
+  await fsp.writeFile(target, '{"v":0}');
+  await removeAuth(home);
+  let gone = false;
+  try { await fsp.stat(target); } catch { gone = true; }
+  check('the credential is gone afterwards', () => assert.ok(gone));
+
+  // The login path calls this whether or not anything is signed in.
+  await removeAuth(home);
+  check('calling it again on nothing does not throw', () => assert.ok(true));
+
+  check('~/.codex/auth.json was NOT touched', () => assert.equal(JSON.stringify(readAuth()), stillReal));
+
+  await fsp.rm(home, { recursive: true, force: true });
 }
 
 console.log('\nwatchLiveAuth (throwaway CODEX_HOME, real module)');
