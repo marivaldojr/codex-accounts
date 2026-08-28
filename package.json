@@ -1,0 +1,192 @@
+{
+  "name": "codex-accounts",
+  "displayName": "Codex Accounts",
+  "description": "Alterna entre múltiplas contas do Codex (ChatGPT) no VS Code, com os limites de uso ao vivo.",
+  "version": "0.1.0",
+  "publisher": "marivaldojr",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "codex",
+    "openai",
+    "chatgpt",
+    "account",
+    "switcher",
+    "usage",
+    "rate limit"
+  ],
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1f1f1f",
+    "theme": "dark"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codexAccounts",
+          "title": "Codex Accounts",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "codexAccounts": [
+        {
+          "id": "codexAccounts.accountsView",
+          "name": "Accounts",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "codexAccounts.saveCurrent",
+        "title": "Codex Accounts: Salvar conta atual como perfil",
+        "icon": "$(add)"
+      },
+      {
+        "command": "codexAccounts.switch",
+        "title": "Codex Accounts: Trocar de conta",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "codexAccounts.refresh",
+        "title": "Codex Accounts: Atualizar limites de uso",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "codexAccounts.login",
+        "title": "Codex Accounts: Entrar pelo terminal",
+        "icon": "$(sign-in)"
+      },
+      {
+        "command": "codexAccounts.warmup",
+        "title": "Codex Accounts: Aquecer conta (Hi)",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "codexAccounts.openWindow",
+        "title": "Codex Accounts: Abrir janela independente",
+        "icon": "$(window)"
+      },
+      {
+        "command": "codexAccounts.rename",
+        "title": "Codex Accounts: Renomear perfil"
+      },
+      {
+        "command": "codexAccounts.remove",
+        "title": "Codex Accounts: Remover perfil"
+      },
+      {
+        "command": "codexAccounts.openPanel",
+        "title": "Codex Accounts: Mostrar painel de contas"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "codexAccounts.saveCurrent",
+          "when": "view == codexAccounts.accountsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codexAccounts.refresh",
+          "when": "view == codexAccounts.accountsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "codexAccounts.login",
+          "when": "view == codexAccounts.accountsView",
+          "group": "navigation@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codexAccounts.rename"
+        },
+        {
+          "command": "codexAccounts.remove"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Codex Accounts",
+      "properties": {
+        "codexAccounts.pollIntervalSeconds": {
+          "type": "number",
+          "default": 900,
+          "minimum": 120,
+          "markdownDescription": "De quanto em quanto tempo (segundos) atualizar automaticamente os limites de uso. Cada atualização sobe um `codex app-server` por perfil; valores abaixo de 120s são elevados para 120s."
+        },
+        "codexAccounts.autoReloadAfterSwitch": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Recarregar a janela automaticamente depois de trocar de conta (o Codex só assume a conta nova ao recarregar). Desligado, a extensão pergunta antes."
+        },
+        "codexAccounts.codexHome": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Caminho do `CODEX_HOME`. Vazio = `$CODEX_HOME` do ambiente ou, na falta dele, `~/.codex`."
+        },
+        "codexAccounts.codexCommand": {
+          "type": "string",
+          "default": "codex",
+          "markdownDescription": "Comando da CLI do Codex. Use o caminho completo se o VS Code não achar `codex` no PATH."
+        },
+        "codexAccounts.warnThresholdPercent": {
+          "type": "number",
+          "default": 80,
+          "minimum": 1,
+          "maximum": 100,
+          "markdownDescription": "Percentual de uso a partir do qual a barra fica vermelha."
+        },
+        "codexAccounts.warmupModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Modelo passado ao `codex exec` no aquecimento (botão Hi). Vazio = modelo padrão do perfil."
+        },
+        "codexAccounts.warmupPrompt": {
+          "type": "string",
+          "default": "Hi",
+          "markdownDescription": "Prompt usado no aquecimento (botão Hi)."
+        },
+        "codexAccounts.warmupTimeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 15,
+          "markdownDescription": "Tempo máximo de espera do aquecimento."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production",
+    "typecheck": "tsc --noEmit",
+    "vscode:prepublish": "npm run package",
+    "build:vsix": "npm run package && vsce package",
+    "test:smoke": "tsc -p . && node test/smoke.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marivaldojr/codex-accounts"
+  }
+}

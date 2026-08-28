@@ -1,0 +1,191 @@
+:root {
+  --gap: 8px;
+  --radius: 6px;
+}
+
+body {
+  margin: 0;
+  padding: 10px;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: transparent;
+}
+
+.toolbar {
+  display: flex;
+  gap: var(--gap);
+  margin-bottom: 12px;
+}
+
+button {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--vscode-button-border, transparent);
+  background: var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.18));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.3));
+}
+
+button.primary {
+  flex: 1;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+button.primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+button.danger:hover {
+  background: var(--vscode-inputValidation-errorBackground, rgba(190, 60, 60, 0.35));
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hint {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(200, 160, 60, 0.6));
+  background: var(--vscode-inputValidation-warningBackground, rgba(200, 160, 60, 0.12));
+  font-size: 12px;
+}
+
+.card {
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.card.active {
+  border-color: var(--vscode-focusBorder);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  margin-bottom: 10px;
+}
+
+.label {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.badge.active {
+  color: var(--vscode-charts-green, #4caf50);
+}
+
+.card-head .spacer {
+  flex: 1;
+}
+
+.email {
+  font-size: 11px;
+  opacity: 0.7;
+  margin: -6px 0 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.limit-name {
+  font-size: 11px;
+  opacity: 0.65;
+  margin: 10px 0 4px;
+}
+
+.meter + .meter {
+  margin-top: 8px;
+}
+
+.meter-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--vscode-progressBar-background, rgba(128, 128, 128, 0.25));
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  background: var(--vscode-charts-green, #4caf50);
+}
+
+.bar.warn > span {
+  background: var(--vscode-charts-red, #e05252);
+}
+
+.reset {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-top: 3px;
+}
+
+.meta {
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 10px 0 8px;
+}
+
+.meta.error {
+  color: var(--vscode-errorForeground, #e05252);
+  opacity: 1;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.actions button {
+  flex: 1;
+  min-width: 62px;
+}
+
+.empty {
+  padding: 16px 4px;
+  font-size: 12px;
+  opacity: 0.7;
+  line-height: 1.6;
+}
+
+footer {
+  margin-top: 14px;
+  font-size: 10px;
+  opacity: 0.45;
+  word-break: break-all;
+}
