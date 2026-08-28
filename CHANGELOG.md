@@ -4,6 +4,32 @@ Notable changes to Codex Accounts. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] — 2026-08-28
+
+### Added
+
+- **The login runs inside the editor.** Pressing **Log in** now drives
+  `codex app-server` directly — the same path the official extension uses —
+  instead of opening a terminal. The browser opens on its own, a notification
+  waits for it with a cancel button, and the account that arrives becomes the
+  active one, with the reload offered as soon as it lands. No terminal, and no
+  watching a file to guess when the login finished.
+- **Nothing is cleared out of the way any more.** The app-server login does not
+  revoke, so `auth.json` is left alone and written only once the new login
+  succeeds. Abandoning the flow now leaves the account you were on exactly
+  where it was, where before it left you signed out locally.
+
+### Changed
+
+- **A terminal `codex login` is the fallback, not the default.** It runs when
+  the app-server has no login method — a Codex too old for it — and clears
+  `auth.json` first, as before. Which one you get is decided by asking, not by
+  reading a version number.
+- Two refusals that are hard to place now say where to look: the login port
+  (1455, with 1457 as its only fallback) being held by another login in
+  flight, and credentials coming from `CODEX_AUTH` or `CODEX_ACCESS_TOKEN` in
+  the environment, which no login here can change.
+
 ## [0.1.3] — 2026-08-28
 
 ### Fixed
@@ -114,6 +140,7 @@ First release.
 - Every refresh spawns one `codex app-server` per profile, in batches of three.
   With many accounts, prefer a longer interval.
 
+[0.1.4]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.4
 [0.1.3]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.3
 [0.1.2]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.2
 [0.1.1]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.1
