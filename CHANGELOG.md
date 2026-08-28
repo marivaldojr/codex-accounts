@@ -4,6 +4,20 @@ Notable changes to Codex Accounts. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] — 2026-08-28
+
+### Fixed
+
+- **Logging in no longer signs the previous account out.** `codex login`
+  revokes the credential it finds before it starts the new flow — it posts the
+  stored refresh token to `/oauth/revoke`. Capturing `auth.json` first was not
+  enough: the copy in the profile was revoked along with the file, so the
+  account you had just been using could not be switched back to. The **Log in**
+  button now clears `auth.json` after capturing it, and revocation does nothing
+  against an empty auth store. This is why signing in through the official
+  extension's own interface always left the other accounts alone — that path
+  goes through the app-server, which never had the revoke step.
+
 ## [0.1.2] — 2026-08-28
 
 ### Changed
@@ -100,6 +114,7 @@ First release.
 - Every refresh spawns one `codex app-server` per profile, in batches of three.
   With many accounts, prefer a longer interval.
 
+[0.1.3]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.3
 [0.1.2]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.2
 [0.1.1]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.1
 [0.1.0]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.0
