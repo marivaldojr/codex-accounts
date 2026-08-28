@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { AppServerClient, AppServerError } from './app-server';
 import { resolveCodexCommand } from './cli';
 import { authFilePath, readAuth, removeAuth, resolveCodexHome, writeAuth } from './codex-home';
 import { isUsableAuth, readIdentity } from './identity';
@@ -19,7 +20,7 @@ const USAGE_CONCURRENCY = 3;
 const SELF_WRITE_ECHO_MS = 2000;
 
 /** Messages the panel swallows instead of surfacing as a warning. */
-const SILENT_MESSAGES = new Set(['Canceled.', 'Switch canceled.']);
+const SILENT_MESSAGES = new Set(['Canceled.', 'Switch canceled.', 'Login canceled.']);
 
 export class AccountsService {
   private refreshing = false;
@@ -191,37 +192,116 @@ export class AccountsService {
   }
 
   /**
-   * Opens a terminal running `codex login` against the active CODEX_HOME.
+   * Signs in to another account. The account that arrives becomes the active
+   * one, which is what the login already means to anyone pressing the button.
    *
-   * Two things happen before the terminal opens, for two different reasons.
-   *
-   * The account already signed in is captured because `codex login` overwrites
-   * auth.json, and the tokens it overwrites are the only valid ones that
-   * account has — Codex may have rotated them since we last looked, and
-   * rotation revokes whatever copy we were holding.
-   *
-   * Then the file is deleted, because capturing it is not enough on its own.
-   * The CLI revokes the credential it finds before it starts the new flow: it
-   * posts the stored refresh token to `/oauth/revoke`, which kills the copy we
-   * just captured along with the one on disk. Revocation reads the auth store
-   * and does nothing when it is empty, so clearing the file first is what lets
-   * the previous account survive a login. The app-server login the official
-   * extension drives never had that step — which is why signing in there leaves
-   * the other accounts alone, and signing in here used to not.
+   * The account already signed in is captured first, because the login
+   * overwrites auth.json and the tokens it overwrites are the only valid ones
+   * that account has — Codex may have rotated them since we last looked, and
+   * rotation revokes whatever copy we were holding. The watcher keeps that copy
+   * current for as long as the browser half of the flow takes.
    */
   async login(): Promise<ActionResult> {
     const captured = await this.captureLiveAccount();
-    const saved = captured ? this.store.get(captured.id) : undefined;
+    const previous = captured ? this.store.get(captured.id) : undefined;
+    const native = await this.nativeLogin();
+    return native ?? (await this.terminalLogin(previous));
+  }
+
+  /**
+   * Drives the login through `codex app-server`, the same path the official
+   * extension uses. Two things make it the better one.
+   *
+   * It does not revoke. The CLI posts the credential it finds to
+   * `/oauth/revoke` before starting, which kills the copy we just captured
+   * along with the one on disk; the app-server never had that step. So nothing
+   * has to be cleared out of the way first, and an abandoned login leaves the
+   * account you were on exactly where it was — auth.json is written only once
+   * the new login succeeds.
+   *
+   * And it says when it is done. A terminal has to be watched for a file to
+   * appear; here the finish arrives as a notification, so the account can be
+   * adopted and the reload offered at the right moment.
+   *
+   * Returns null when the app-server cannot do it — an older Codex without the
+   * method, or one we could not talk to at all — so the caller falls back.
+   */
+  private async nativeLogin(): Promise<ActionResult | null> {
+    const client = new AppServerClient(resolveCodexHome(), this.clientVersion);
+    try {
+      let started;
+      try {
+        await client.initialize();
+        started = await client.startChatGptLogin();
+      } catch (error) {
+        // A refusal carries a code: the app-server understood and said no, and
+        // the terminal would only fail the same way with a worse message.
+        if (error instanceof AppServerError && !error.isUnknownMethod) {
+          return { ok: false, message: describeLoginRefusal(error) };
+        }
+        return null;
+      }
+
+      await vscode.env.openExternal(vscode.Uri.parse(started.authUrl));
+      const outcome = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Codex Accounts: waiting for the browser login…',
+          cancellable: true,
+        },
+        async (_progress, token) => {
+          token.onCancellationRequested(() => void client.cancelLogin(started.loginId));
+          return client.waitForLogin(started.loginId);
+        },
+      );
+
+      if (!outcome.success) {
+        // A cancel comes back as a plain unsuccessful login, same as a refusal
+        // in the browser. Nothing was written either way.
+        return { ok: false, message: outcome.error ?? 'Login canceled.' };
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return { ok: false, message: `The login did not finish: ${reason}` };
+    } finally {
+      await client.dispose();
+    }
+
+    // The app-server wrote the new account into the live file, so it is already
+    // the active one. All that is left is to take it into a profile and offer
+    // the reload Codex needs to notice.
+    const adopted = await this.captureLiveAccount();
+    this.onChange();
+    const profile = adopted ? this.store.get(adopted.id) : undefined;
+    if (!profile) {
+      return { ok: true, message: 'Signed in.' };
+    }
+    void this.refreshOne(profile.id);
+    await this.promptReload(profile);
+    return { ok: true, message: `Now using "${profile.label}".` };
+  }
+
+  /**
+   * The fallback: a terminal running `codex login`, for a Codex too old to
+   * drive the login over the app-server.
+   *
+   * Here auth.json has to be cleared first. The CLI revokes the credential it
+   * finds before it starts the new flow — it posts the stored refresh token to
+   * `/oauth/revoke`, which kills the copy captured a moment ago along with the
+   * one on disk. Revocation reads the auth store and does nothing when it is
+   * empty, so clearing the file is what lets the previous account survive.
+   */
+  private async terminalLogin(previous: Profile | undefined): Promise<ActionResult> {
     try {
       await this.clearLive();
     } catch (error) {
       // Worth blocking on only when there is something to lose: going ahead
       // would revoke the account captured a moment ago.
-      if (saved) {
+      if (previous) {
         const reason = error instanceof Error ? error.message : String(error);
         return {
           ok: false,
-          message: `Could not clear ${authFilePath()} first (${reason}). Signing in now would sign "${saved.label}" out for good.`,
+          message: `Could not clear ${authFilePath()} first (${reason}). Signing in now would sign "${previous.label}" out for good.`,
         };
       }
     }
@@ -235,8 +315,8 @@ export class AccountsService {
     terminal.sendText(`${command} login`);
     return {
       ok: true,
-      message: saved
-        ? `Signing in. "${saved.label}" stays saved — press Use on its card to go back to it.`
+      message: previous
+        ? `Signing in. "${previous.label}" stays saved — press Use on its card to go back to it.`
         : 'Signing in. The new account appears in the panel on its own.',
     };
   }
@@ -438,4 +518,19 @@ export class AccountsService {
   static isSilent(message: string): boolean {
     return SILENT_MESSAGES.has(message);
   }
+}
+
+/**
+ * Turns an app-server refusal into something actionable. Two of these are worth
+ * saying more about than the app-server does, because the cause is somewhere
+ * the user would not think to look.
+ */
+function describeLoginRefusal(error: AppServerError): string {
+  if (/failed to start login server/i.test(error.message)) {
+    return `${error.message} The login needs port 1455, or 1457 as its only fallback — another Codex login in progress will be holding one of them.`;
+  }
+  if (/external auth is active/i.test(error.message)) {
+    return `${error.message} Codex is taking its credentials from the environment (CODEX_AUTH or CODEX_ACCESS_TOKEN), so signing in here would not change which account it uses.`;
+  }
+  return error.message;
 }

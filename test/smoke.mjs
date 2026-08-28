@@ -81,6 +81,51 @@ for (const limit of snapshot.limits) {
   console.log(`       ${limit.limitName ?? limit.limitId}: ` + limit.windows.map(w => `${w.label} ${w.usedPercent}%`).join(' | '));
 }
 
+console.log('\naccount/login/start (throwaway CODEX_HOME, real app-server — no login is completed)');
+{
+  const fsp = await import('node:fs/promises');
+  const os = await import('node:os');
+  const nodePath = await import('node:path');
+  const { AppServerClient, AppServerError } = require('../out/app-server.js');
+
+  const home = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'codex-accounts-login-'));
+  const stillReal = JSON.stringify(readAuth());
+  const client = new AppServerClient(home, '0.1.0');
+  let started;
+  let refusal;
+  try {
+    await client.initialize();
+    started = await client.startChatGptLogin();
+  } catch (error) {
+    refusal = error;
+  }
+
+  if (refusal instanceof AppServerError && /failed to start login server/i.test(refusal.message)) {
+    // Port 1455/1457 taken by another login in flight. Not our bug to fail on.
+    console.log(`  SKIP the login port is busy: ${refusal.message}`);
+  } else {
+    check('the method exists (not experimental-gated)', () => {
+      assert.ok(!(refusal instanceof AppServerError) || !refusal.isUnknownMethod, String(refusal));
+    });
+    check('a login started', () => assert.ok(started, String(refusal)));
+    check('it returns a loginId', () => assert.match(started?.loginId ?? '', /[0-9a-f-]{36}/));
+    check('and an auth.openai.com URL to open', () =>
+      assert.match(started?.authUrl ?? '', /^https:\/\/auth\.openai\.com\//));
+    if (started) {
+      await client.cancelLogin(started.loginId);
+      check('cancelling it does not throw', () => assert.ok(true));
+    }
+  }
+
+  await client.dispose();
+  check('~/.codex/auth.json was NOT touched', () => assert.equal(JSON.stringify(readAuth()), stillReal));
+  let seededCredential = true;
+  try { await fsp.stat(nodePath.join(home, 'auth.json')); } catch { seededCredential = false; }
+  check('the throwaway home stayed empty of credentials', () => assert.equal(seededCredential, false));
+
+  await fsp.rm(home, { recursive: true, force: true });
+}
+
 console.log('\nremoveAuth (throwaway CODEX_HOME, real module)');
 {
   const fsp = await import('node:fs/promises');
