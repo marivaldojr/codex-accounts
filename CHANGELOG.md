@@ -4,6 +4,28 @@ Notable changes to Codex Accounts. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-08-28
+
+### Changed
+
+- **Every account in a card of its own.** A closed border separates two
+  accounts better than a rule between them did: the block reads as one object
+  rather than as the text that happens to sit under a line. The card in use is
+  stated by its own edge, tinted green, so the rail that used to carry it is
+  gone — one indicator, not two.
+- **Controls that look like controls.** Buttons in the toolbar and on each card
+  carry an edge of their own instead of appearing only on hover. A panel this
+  size is read in one glance, and floating text does not say "click me".
+- **A usage bar you can read.** Five pixels with rounded ends rather than a
+  three-pixel hairline, which barely showed a reading in the single digits. The
+  "in use" label is a pill now, so it no longer reads as part of the account
+  name beside it.
+- **The account in use sorts first.** It is the one being spent, so its numbers
+  are what the panel is opened to read. Everything below it keeps the previous
+  order: most room first, accounts with no reading last. The `least used first`
+  label above the list is gone — the order carries itself, and the pill on the
+  top card already says which account is in use.
+
 ## [0.1.1] — 2026-08-28
 
 ### Changed
@@ -78,5 +100,6 @@ First release.
 - Every refresh spawns one `codex app-server` per profile, in batches of three.
   With many accounts, prefer a longer interval.
 
+[0.1.2]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.2
 [0.1.1]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.1
 [0.1.0]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.0
