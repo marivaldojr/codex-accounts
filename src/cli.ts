@@ -5,7 +5,7 @@ export interface CodexCommand {
   args: string[];
 }
 
-/** Comando base da CLI do Codex, respeitando a configuração do usuário. */
+/** Base Codex CLI command, honoring the user's configuration. */
 export function resolveCodexCommand(extra: string[] = []): CodexCommand {
   const configured = vscode.workspace
     .getConfiguration('codexAccounts')

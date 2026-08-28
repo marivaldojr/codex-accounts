@@ -4,7 +4,7 @@ import { AccountsService } from './service';
 import { ProfileStore } from './store';
 import { Profile } from './types';
 
-/** Piso do intervalo: cada ciclo sobe um `codex app-server` por perfil. */
+/** Floor for the poll interval: each cycle spawns one `codex app-server` per profile. */
 const MIN_POLL_SECONDS = 120;
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -21,12 +21,12 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  /** Pede um perfil ao usuário quando o comando é chamado pela paleta. */
+  /** Asks the user for a profile when a command is run from the palette. */
   const pickProfile = async (placeHolder: string): Promise<Profile | undefined> => {
     const profiles = store.list();
     if (profiles.length === 0) {
       void vscode.window.showInformationMessage(
-        'Codex Accounts: nenhum perfil salvo. Use "Salvar conta atual".',
+        'Codex Accounts: no profiles saved. Use "Save current account".',
       );
       return undefined;
     }
@@ -45,7 +45,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const notify = (result: { ok: boolean; message: string }): void => {
     if (result.ok) {
       void vscode.window.showInformationMessage(`Codex Accounts: ${result.message}`);
-    } else {
+    } else if (!AccountsService.isSilent(result.message)) {
       void vscode.window.showWarningMessage(`Codex Accounts: ${result.message}`);
     }
   };
@@ -69,32 +69,32 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand(
       'codexAccounts.switch',
-      withPick('Trocar para qual conta?', (profile) => service.switchTo(profile.id)),
+      withPick('Switch to which account?', (profile) => service.switchTo(profile.id)),
     ),
     vscode.commands.registerCommand(
       'codexAccounts.warmup',
-      withPick('Aquecer qual conta?', (profile) => service.warmup(profile.id)),
+      withPick('Warm up which account?', (profile) => service.warmup(profile.id)),
     ),
     vscode.commands.registerCommand(
       'codexAccounts.openWindow',
-      withPick('Abrir janela para qual conta?', (profile) =>
+      withPick('Open a window for which account?', (profile) =>
         service.openIndependentWindow(profile.id, context.globalStorageUri.fsPath),
       ),
     ),
     vscode.commands.registerCommand(
       'codexAccounts.rename',
-      withPick('Renomear qual perfil?', (profile) => service.rename(profile.id)),
+      withPick('Rename which profile?', (profile) => service.rename(profile.id)),
     ),
     vscode.commands.registerCommand(
       'codexAccounts.remove',
-      withPick('Remover qual perfil?', (profile) => service.remove(profile.id)),
+      withPick('Remove which profile?', (profile) => service.remove(profile.id)),
     ),
     vscode.commands.registerCommand('codexAccounts.openPanel', async () => {
       await vscode.commands.executeCommand('codexAccounts.accountsView.focus');
     }),
   );
 
-  // Poll dos limites. O intervalo é reprogramado quando a configuração muda.
+  // Usage polling. The interval is rescheduled when the setting changes.
   let timer: NodeJS.Timeout | undefined;
   const schedule = (): void => {
     if (timer) {
@@ -124,5 +124,5 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {
-  // Sem estado global fora do context: o VS Code descarta as subscriptions.
+  // No global state outside the context: VS Code disposes the subscriptions.
 }

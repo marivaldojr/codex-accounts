@@ -1,6 +1,6 @@
 import { CodexAuth, Identity } from './types';
 
-/** Namespace onde o id_token da OpenAI guarda as claims de conta/plano. */
+/** Namespace where the OpenAI id_token carries the account/plan claims. */
 const OPENAI_AUTH_CLAIM = 'https://api.openai.com/auth';
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
@@ -26,8 +26,9 @@ function asString(value: unknown): string | undefined {
 }
 
 /**
- * Lê a identidade a partir das claims do `id_token`. Só decodifica — não valida
- * assinatura: quem valida é a OpenAI, e o token já veio do disco do próprio usuário.
+ * Reads the identity from the `id_token` claims. Decode only — no signature
+ * check: OpenAI is the one who validates it, and the token came off the user's
+ * own disk.
  */
 export function readIdentity(auth: CodexAuth | null): Identity {
   const token = auth?.tokens?.id_token;
@@ -43,7 +44,7 @@ export function readIdentity(auth: CodexAuth | null): Identity {
   };
 }
 
-/** Um `auth.json` só serve se der para renovar a sessão a partir dele. */
+/** An `auth.json` is only useful if the session can be renewed from it. */
 export function isUsableAuth(auth: CodexAuth | null): auth is CodexAuth {
   if (!auth) {
     return false;
@@ -55,9 +56,9 @@ export function isUsableAuth(auth: CodexAuth | null): auth is CodexAuth {
 }
 
 /**
- * Duas contas são a mesma quando o `chatgpt_account_id` bate. É o único campo
- * estável: o `access_token` muda a cada refresh e o e-mail se repete entre
- * workspaces da mesma pessoa.
+ * Two accounts are the same when `chatgpt_account_id` matches. It is the only
+ * stable field: the `access_token` changes on every refresh, and the same email
+ * repeats across workspaces.
  */
 export function sameAccount(a: Identity, b: Identity): boolean {
   return Boolean(a.accountId && b.accountId && a.accountId === b.accountId);

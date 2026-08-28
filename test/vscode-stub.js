@@ -1,4 +1,4 @@
-// Stub mínimo do módulo `vscode` para exercitar a lógica fora do editor.
+// Minimal `vscode` module stub, to exercise the logic outside the editor.
 const config = new Map(Object.entries({
   'codexAccounts.codexHome': '',
   'codexAccounts.codexCommand': 'codex',

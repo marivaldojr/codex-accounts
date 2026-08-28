@@ -7,9 +7,9 @@ const PROFILES_KEY = 'codexAccounts.profiles';
 const SECRET_PREFIX = 'codexAccounts.auth.';
 
 /**
- * Metadado do perfil no `globalState`; o `auth.json` (que contém os tokens) só
- * no SecretStorage. Separar os dois é o que evita despejar credencial no
- * `state.vscdb` em claro.
+ * Profile metadata goes in `globalState`; the `auth.json` (which holds the
+ * tokens) only in SecretStorage. Keeping the two apart is what avoids dumping
+ * credentials into `state.vscdb` in the clear.
  */
 export class ProfileStore {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -50,7 +50,7 @@ export class ProfileStore {
     await this.context.secrets.store(this.secretKey(id), JSON.stringify(auth));
   }
 
-  /** Cria um perfil a partir de um `auth.json`, derivando a identidade do token. */
+  /** Creates a profile from an `auth.json`, deriving the identity from the token. */
   async add(label: string, auth: CodexAuth): Promise<Profile> {
     const profiles = this.raw();
     const identity = readIdentity(auth);
@@ -71,7 +71,7 @@ export class ProfileStore {
     return profile;
   }
 
-  /** Acha o perfil que corresponde a uma identidade (pelo `chatgpt_account_id`). */
+  /** Finds the profile matching an identity (by `chatgpt_account_id`). */
   findByIdentity(identity: Identity): Profile | undefined {
     if (!identity.accountId) {
       return undefined;
@@ -97,8 +97,8 @@ export class ProfileStore {
   }
 
   /**
-   * Reescreve o segredo com o `auth.json` renovado pelo app-server e realinha a
-   * identidade. Sem isso o refresh_token guardado envelhece até deixar de valer.
+   * Rewrites the secret with the `auth.json` the app-server refreshed and
+   * realigns the identity. Without this the stored refresh_token ages out.
    */
   async refreshAuth(id: string, auth: CodexAuth): Promise<void> {
     await this.setAuth(id, auth);

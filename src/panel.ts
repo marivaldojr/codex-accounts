@@ -30,7 +30,7 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
     this.render();
   }
 
-  /** Empurra o estado atual para a webview. */
+  /** Pushes the current state into the webview. */
   render(): void {
     if (!this.view) {
       return;
@@ -82,7 +82,7 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
   private report(result: { ok: boolean; message: string }): void {
     if (result.ok) {
       vscode.window.setStatusBarMessage(`Codex Accounts: ${result.message}`, 5000);
-    } else if (result.message !== 'Cancelado.' && result.message !== 'Troca cancelada.') {
+    } else if (!AccountsService.isSilent(result.message)) {
       void vscode.window.showWarningMessage(`Codex Accounts: ${result.message}`);
     }
   }
@@ -92,7 +92,7 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
     const asset = (file: string) =>
       webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', file));
     return `<!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
@@ -102,14 +102,14 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
 </head>
 <body>
 <div class="toolbar">
-  <button class="primary" data-action="saveCurrent">+ Salvar conta atual</button>
-  <button data-action="login">Login</button>
-  <button data-action="refreshAll" title="Atualizar limites">&#8635;</button>
+  <button class="primary" data-action="saveCurrent">+ Save current account</button>
+  <button data-action="login">Log in</button>
+  <button data-action="refreshAll" title="Refresh usage limits">&#8635;</button>
 </div>
 <div id="unsaved" class="hint" hidden></div>
 <div id="accounts"></div>
 <div id="empty" class="empty" hidden>
-  Nenhum perfil salvo ainda.<br>Entre com <code>codex login</code> e use <b>Salvar conta atual</b>.
+  No profiles saved yet.<br>Sign in with <code>codex login</code>, then use <b>Save current account</b>.
 </div>
 <footer id="home"></footer>
 <script nonce="${nonce}" src="${asset('panel.js')}"></script>

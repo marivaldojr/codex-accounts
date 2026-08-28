@@ -11,43 +11,43 @@
     vscode.postMessage({ type, id });
   }
 
-  /** Texto relativo curto: "em 1h 10m", "em 3d 10h", "agora". */
+  /** Short relative future: "in 1h 10m", "in 3d 10h". */
   function relativeFuture(unixSeconds) {
     if (!unixSeconds) {
       return '';
     }
     const seconds = unixSeconds - Math.floor(Date.now() / 1000);
     if (seconds <= 0) {
-      return 'a qualquer momento';
+      return 'any moment now';
     }
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     if (days > 0) {
-      return `em ${days}d ${hours}h`;
+      return `in ${days}d ${hours}h`;
     }
     if (hours > 0) {
-      return `em ${hours}h ${minutes}m`;
+      return `in ${hours}h ${minutes}m`;
     }
-    return `em ${minutes}m`;
+    return `in ${minutes}m`;
   }
 
   function relativePast(timestampMs) {
     if (!timestampMs) {
-      return 'nunca';
+      return 'never';
     }
     const minutes = Math.floor((Date.now() - timestampMs) / 60000);
     if (minutes < 1) {
-      return 'agora há pouco';
+      return 'just now';
     }
     if (minutes < 60) {
-      return `há ${minutes} min`;
+      return `${minutes} min ago`;
     }
     const hours = Math.floor(minutes / 60);
     if (hours < 24) {
-      return `há ${hours}h`;
+      return `${hours}h ago`;
     }
-    return `há ${Math.floor(hours / 24)}d`;
+    return `${Math.floor(hours / 24)}d ago`;
   }
 
   function el(tag, className, text) {
@@ -72,7 +72,7 @@
     meter.append(head, bar);
     const reset = relativeFuture(window.resetsAt);
     if (reset) {
-      meter.append(el('div', 'reset', `renova ${reset}`));
+      meter.append(el('div', 'reset', `resets ${reset}`));
     }
     return meter;
   }
@@ -93,10 +93,10 @@
       head.append(el('span', 'badge', profile.planType));
     }
     if (profile.active) {
-      head.append(el('span', 'badge active', 'ativa'));
+      head.append(el('span', 'badge active', 'active'));
     }
     head.append(el('span', 'spacer'));
-    head.append(actionButton('↻', 'refreshOne', profile.id, 'Atualizar esta conta'));
+    head.append(actionButton('↻', 'refreshOne', profile.id, 'Refresh this account'));
     card.append(head);
 
     if (profile.email) {
@@ -118,17 +118,17 @@
     if (usage && usage.error) {
       card.append(el('div', 'meta error', usage.error));
     } else {
-      card.append(el('div', 'meta', `atualizado ${relativePast(usage && usage.fetchedAt)}`));
+      card.append(el('div', 'meta', `updated ${relativePast(usage && usage.fetchedAt)}`));
     }
 
     const actions = el('div', 'actions');
-    actions.append(actionButton('Janela', 'window', profile.id, 'Abrir janela com CODEX_HOME próprio'));
+    actions.append(actionButton('Window', 'window', profile.id, 'Open a window with its own CODEX_HOME'));
     if (!profile.active) {
-      actions.append(actionButton('Trocar', 'switch', profile.id, 'Usar esta conta'));
+      actions.append(actionButton('Switch', 'switch', profile.id, 'Use this account'));
     }
-    actions.append(actionButton('Hi', 'warmup', profile.id, 'Mandar um prompt mínimo por esta conta'));
-    actions.append(actionButton('✎', 'rename', profile.id, 'Renomear'));
-    actions.append(actionButton('\u{1F5D1}', 'remove', profile.id, 'Remover', 'danger'));
+    actions.append(actionButton('Hi', 'warmup', profile.id, 'Send a minimal prompt through this account'));
+    actions.append(actionButton('✎', 'rename', profile.id, 'Rename'));
+    actions.append(actionButton('\u{1F5D1}', 'remove', profile.id, 'Remove', 'danger'));
     card.append(actions);
 
     return card;
@@ -141,7 +141,7 @@
     empty.hidden = state.profiles.length > 0;
 
     if (state.unsaved) {
-      unsaved.textContent = `Conta conectada não salva: ${state.unsaved.email || 'desconhecida'}. Salve-a antes de trocar de perfil.`;
+      unsaved.textContent = `Signed-in account not saved: ${state.unsaved.email || 'unknown'}. Save it before switching profiles.`;
       unsaved.hidden = false;
     } else {
       unsaved.hidden = true;

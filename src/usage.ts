@@ -15,9 +15,9 @@ interface JsonRpcMessage {
 }
 
 /**
- * Cliente JSON-RPC (por linha, no stdin/stdout) do `codex app-server`. É por ali
- * que a própria CLI expõe `account/rateLimits/read` — não existe endpoint HTTP
- * público equivalente.
+ * Line-delimited JSON-RPC client (over stdin/stdout) for `codex app-server`.
+ * That is where the CLI itself exposes `account/rateLimits/read` — there is no
+ * public HTTP endpoint that does the same.
  */
 class AppServerClient {
   private readonly child;
@@ -44,12 +44,12 @@ class AppServerClient {
     });
     this.child.stdin.on('error', (error: Error) => this.failAll(error));
     this.child.on('error', (error: Error) =>
-      this.failAll(new Error(`não foi possível iniciar o codex app-server: ${error.message}`)),
+      this.failAll(new Error(`could not start codex app-server: ${error.message}`)),
     );
     this.child.on('exit', (code, signal) =>
       this.failAll(
         new Error(
-          `codex app-server encerrou antes de responder (${signal ?? `código ${code ?? '?'}`}).${this.stderrSuffix()}`,
+          `codex app-server exited before responding (${signal ?? `code ${code ?? '?'}`}).${this.stderrSuffix()}`,
         ),
       ),
     );
@@ -77,11 +77,11 @@ class AppServerClient {
       return;
     }
     this.closed = true;
-    this.failAll(new Error('consulta cancelada.'));
+    this.failAll(new Error('request canceled.'));
     try {
       this.child.stdin.write(`${JSON.stringify({ method: 'exit' })}\n`);
     } catch {
-      // O processo já pode ter morrido; o kill abaixo cobre o caso.
+      // The process may already be gone; the kill below covers that.
     }
     this.child.stdin.end();
     this.reader.close();
@@ -102,13 +102,13 @@ class AppServerClient {
 
   private request(method: string, params?: unknown): Promise<unknown> {
     if (this.closed) {
-      return Promise.reject(new Error('cliente do app-server já encerrado.'));
+      return Promise.reject(new Error('app-server client already closed.'));
     }
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error(`tempo esgotado esperando ${method}.${this.stderrSuffix()}`));
+        reject(new Error(`timed out waiting for ${method}.${this.stderrSuffix()}`));
       }, REQUEST_TIMEOUT_MS);
       this.pending.set(id, { resolve, reject, timer });
       const payload: Record<string, unknown> = { id, method };
@@ -130,10 +130,10 @@ class AppServerClient {
     try {
       message = JSON.parse(line) as JsonRpcMessage;
     } catch {
-      return; // O app-server também emite avisos livres no stdout; ignorar.
+      return; // The app-server also prints free-form warnings on stdout; skip them.
     }
     if (typeof message.id !== 'number') {
-      return; // Notificação (configWarning, remoteControl/status/changed, …).
+      return; // Notification (configWarning, remoteControl/status/changed, …).
     }
     const pending = this.pending.get(message.id);
     if (!pending) {
@@ -142,7 +142,7 @@ class AppServerClient {
     this.pending.delete(message.id);
     clearTimeout(pending.timer);
     if (message.error) {
-      pending.reject(new Error(message.error.message ?? 'erro do app-server.'));
+      pending.reject(new Error(message.error.message ?? 'app-server error.'));
     } else {
       pending.resolve(message.result);
     }
@@ -158,7 +158,7 @@ class AppServerClient {
 
   private stderrSuffix(): string {
     const trimmed = this.stderr.trim();
-    return trimmed ? ` Saída de erro: ${trimmed.slice(-300)}` : '';
+    return trimmed ? ` Error output: ${trimmed.slice(-300)}` : '';
   }
 }
 
@@ -173,10 +173,10 @@ function clampPercent(value: unknown): number | null {
   return Math.min(100, Math.max(0, Math.round(value)));
 }
 
-/** Rótulo curto e neutro a partir da duração da janela: "5h", "7d", "30d". */
+/** Short, language-neutral label from the window duration: "5h", "7d", "30d". */
 export function windowLabel(durationMins: number | null): string {
   if (!durationMins || durationMins <= 0) {
-    return 'janela';
+    return 'window';
   }
   if (durationMins % (60 * 24) === 0) {
     return `${durationMins / (60 * 24)}d`;
@@ -216,9 +216,10 @@ function normalizeWindow(raw: unknown, nowSeconds: number): UsageWindow | null {
 }
 
 /**
- * `primary`/`secondary` são mapeados pela posição, como a própria API os nomeia.
- * A OpenAI não garante que primary seja 5h e secondary semanal, e já mudou a
- * duração das janelas sem renomear os campos — por isso o rótulo sai da duração.
+ * `primary`/`secondary` are mapped positionally, as the API itself names them.
+ * OpenAI does not guarantee primary is 5h and secondary is weekly, and has
+ * changed window lengths before without renaming the fields — which is why the
+ * label comes from the duration.
  */
 function normalizeLimit(limitId: string, raw: unknown, nowSeconds: number): UsageLimit | null {
   if (!isRecord(raw)) {
@@ -240,7 +241,7 @@ export function normalizeRateLimits(response: unknown, now = Date.now()): UsageS
   const nowSeconds = Math.floor(now / 1000);
   const snapshot: UsageSnapshot = { fetchedAt: now, limits: [] };
   if (!isRecord(response)) {
-    return { ...snapshot, error: 'resposta inesperada do app-server.' };
+    return { ...snapshot, error: 'unexpected response from the app-server.' };
   }
 
   const byId = isRecord(response.rateLimitsByLimitId) ? response.rateLimitsByLimitId : null;
@@ -258,7 +259,7 @@ export function normalizeRateLimits(response: unknown, now = Date.now()): UsageS
     }
   }
 
-  // "codex" é o limite principal da conta; os demais são por família de modelo.
+  // "codex" is the account-wide limit; the rest are per model family.
   snapshot.limits.sort((a, b) =>
     a.limitId === 'codex' ? -1 : b.limitId === 'codex' ? 1 : a.limitId.localeCompare(b.limitId),
   );
@@ -278,9 +279,9 @@ export function normalizeRateLimits(response: unknown, now = Date.now()): UsageS
 }
 
 /**
- * Consulta os limites de uma conta num CODEX_HOME descartável — a conta ativa
- * no `~/.codex` não é tocada. Devolve também o `auth.json` como ficou, porque o
- * app-server renova o token quando ele está perto de expirar.
+ * Queries one account's limits in a throwaway CODEX_HOME — the active account
+ * in `~/.codex` is left alone. Also returns the `auth.json` as it ended up,
+ * because the app-server refreshes the token when it is close to expiring.
  */
 export async function fetchUsage(
   auth: CodexAuth,

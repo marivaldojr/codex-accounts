@@ -1,94 +1,96 @@
 # Codex Accounts
 
-Alterna entre múltiplas contas do Codex (ChatGPT) no VS Code, mostrando os
-limites de uso de **todas** elas num painel na barra lateral — sem precisar
-trocar de conta para descobrir quanto sobrou em cada uma.
+Switch between multiple Codex (ChatGPT) accounts in VS Code, with the usage
+limits of **every** account in one sidebar panel — no need to switch accounts
+just to find out how much is left on each.
 
-## O que faz
+## What it does
 
-- **Painel na activity bar** com um card por conta: plano, e-mail, barras de uso
-  por janela (5h, 7d, …) e quando cada janela renova.
-- **Troca de conta** gravando o `auth.json` do perfil no `CODEX_HOME` ativo.
-- **Leitura de uso isolada:** os limites de cada conta são consultados num
-  `CODEX_HOME` descartável, então ver o uso de uma conta **não** troca a conta
-  ativa nem invalida a sessão em andamento.
-- **Aquecimento (Hi):** manda um prompt mínimo por uma conta parada, também em
-  ambiente isolado, para abrir a janela de uso dela.
-- **Login** pelo terminal (`codex login`) sem sair do editor.
+- **Activity bar panel** with one card per account: plan, email, usage bars per
+  window (5h, 7d, …) and when each window resets.
+- **Account switching** by writing the profile's `auth.json` into the active
+  `CODEX_HOME`.
+- **Isolated usage reads:** each account's limits are queried in a throwaway
+  `CODEX_HOME`, so checking usage does **not** switch the active account or
+  invalidate a session in progress.
+- **Warmup (Hi):** sends a minimal prompt through an idle account, also in an
+  isolated environment, to open its usage window.
+- **Login** from a terminal (`codex login`) without leaving the editor.
 
-## Como funciona por dentro
+## How it works
 
-O Codex guarda a sessão em `$CODEX_HOME/auth.json` (`~/.codex/auth.json` por
-padrão) — o mesmo arquivo que a CLI e a extensão oficial leem. Um perfil aqui é
-uma cópia desse arquivo:
+Codex keeps its session in `$CODEX_HOME/auth.json` (`~/.codex/auth.json` by
+default) — the same file the CLI and the official extension read. A profile here
+is a copy of that file:
 
-- **metadados** (nome, e-mail, plano) ficam no `globalState`;
-- **os tokens** ficam no **SecretStorage** do VS Code, nunca no `globalState`.
+- **metadata** (name, email, plan) lives in `globalState`;
+- **tokens** live in VS Code's **SecretStorage**, never in `globalState`.
 
-Os limites vêm do próprio `codex app-server`, por JSON-RPC no stdin/stdout
-(método `account/rateLimits/read`) — não existe endpoint HTTP público
-equivalente. Para consultar uma conta que não é a ativa, a extensão cria um
-`CODEX_HOME` temporário (`0700`) contendo só o `auth.json` daquele perfil, faz a
-chamada, e apaga o diretório. Se o `app-server` renovar o token nesse meio
-tempo, o token novo é gravado de volta no perfil.
+Limits come from `codex app-server` itself, over JSON-RPC on stdin/stdout
+(method `account/rateLimits/read`) — there is no public HTTP endpoint that does
+the same. To query an account that is not the active one, the extension creates
+a temporary `CODEX_HOME` (mode `0700`) holding only that profile's `auth.json`,
+makes the call, and deletes the directory. If the app-server refreshes the token
+along the way, the new token is written back into the profile.
 
-A identidade sai das claims do `id_token`; duas contas são consideradas a mesma
-quando o `chatgpt_account_id` bate — é o único campo estável, já que o
-`access_token` muda a cada refresh e o e-mail se repete entre workspaces.
+Identity comes from the `id_token` claims; two accounts are considered the same
+when `chatgpt_account_id` matches — the only stable field, since the
+`access_token` changes on every refresh and the same email repeats across
+workspaces.
 
-## Requisitos
+## Requirements
 
 - VS Code 1.85+
-- CLI do Codex (`codex`) no PATH — ou aponte o caminho em
-  `codexAccounts.codexCommand`.
+- The Codex CLI (`codex`) on PATH — or point `codexAccounts.codexCommand` at it.
 
-## Uso
+## Usage
 
-1. Entre numa conta (`codex login`, ou o botão **Login** do painel).
-2. Clique em **+ Salvar conta atual**.
-3. Repita para as outras contas.
-4. Use **Trocar** no card e recarregue a janela quando a extensão pedir.
+1. Sign in to an account (`codex login`, or the panel's **Log in** button).
+2. Click **+ Save current account**.
+3. Repeat for the other accounts.
+4. Use **Switch** on a card, and reload the window when the extension asks.
 
-> O Codex só assume a conta nova depois que a janela recarrega. Ligue
-> `codexAccounts.autoReloadAfterSwitch` para não ser perguntado toda vez.
+> Codex only picks up the new account after the window reloads. Turn on
+> `codexAccounts.autoReloadAfterSwitch` to skip the prompt.
 
-## Configurações
+## Settings
 
-| Chave | Padrão | O que faz |
+| Key | Default | What it does |
 | --- | --- | --- |
-| `codexAccounts.pollIntervalSeconds` | `900` | Intervalo de atualização dos limites (piso de 120s). |
-| `codexAccounts.autoReloadAfterSwitch` | `false` | Recarrega a janela sozinho depois da troca. |
-| `codexAccounts.codexHome` | `""` | `CODEX_HOME` explícito. Vazio = env ou `~/.codex`. |
-| `codexAccounts.codexCommand` | `codex` | Comando da CLI. |
-| `codexAccounts.warnThresholdPercent` | `80` | A partir de quanto a barra fica vermelha. |
-| `codexAccounts.warmupModel` | `""` | Modelo do aquecimento. Vazio = padrão do perfil. |
-| `codexAccounts.warmupPrompt` | `Hi` | Prompt do aquecimento. |
-| `codexAccounts.warmupTimeoutSeconds` | `120` | Tempo máximo do aquecimento. |
+| `codexAccounts.pollIntervalSeconds` | `900` | How often usage limits refresh (floor of 120s). |
+| `codexAccounts.autoReloadAfterSwitch` | `false` | Reload the window automatically after a switch. |
+| `codexAccounts.codexHome` | `""` | Explicit `CODEX_HOME`. Empty = env var, or `~/.codex`. |
+| `codexAccounts.codexCommand` | `codex` | Codex CLI command. |
+| `codexAccounts.warnThresholdPercent` | `80` | Where the usage bar turns red. |
+| `codexAccounts.warmupModel` | `""` | Model used for warmups. Empty = profile default. |
+| `codexAccounts.warmupPrompt` | `Hi` | Prompt used for warmups. |
+| `codexAccounts.warmupTimeoutSeconds` | `120` | Warmup timeout. |
 
-## Limitações conhecidas
+## Known limitations
 
-- **Janela independente** é best-effort. Ela prepara um `CODEX_HOME` só daquele
-  perfil e abre a janela a partir de um terminal com essa variável, mas a nova
-  janela só usa a conta certa se herdar o ambiente. Em Remote-SSH, WSL e dev
-  containers o VS Code costuma reaproveitar um servidor já em execução, e aí a
-  variável não chega no host da extensão. Para isolar de verdade nesses casos,
-  abra o VS Code de um shell com `CODEX_HOME` já exportado.
-- Cada atualização de limites sobe um processo `codex app-server` por perfil (em
-  lotes de 3). Com muitos perfis, prefira intervalos maiores.
+- **Independent window** is best-effort. It prepares a `CODEX_HOME` for that
+  profile alone and opens the window from a terminal carrying the variable, but
+  the new window only picks up the right account if it inherits that
+  environment. Under Remote-SSH, WSL and dev containers, VS Code usually reuses
+  an already-running server, so the variable never reaches the extension host.
+  To isolate properly in those setups, launch VS Code from a shell that already
+  exports `CODEX_HOME`.
+- Every refresh spawns one `codex app-server` process per profile (in batches of
+  3). With many profiles, prefer longer intervals.
 
-## Desenvolvimento
+## Development
 
 ```bash
 npm install
-npm run watch      # bundle em modo watch
+npm run watch      # bundle in watch mode
 npm run typecheck
-npm run test:smoke # exercita identidade + limites contra a sua conta real (só leitura)
+npm run test:smoke # exercises identity + limits against your real account (read-only)
 npm run build:vsix
 ```
 
-O `test:smoke` faz uma chamada real ao `app-server` e verifica, entre outras
-coisas, que o `~/.codex/auth.json` **não** foi modificado.
+`test:smoke` makes a real call to the app-server and asserts, among other
+things, that `~/.codex/auth.json` was **not** modified.
 
-## Licença
+## License
 
 MIT

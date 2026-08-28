@@ -1,4 +1,4 @@
-/** Conteúdo do `auth.json` do Codex, como a CLI o grava. */
+/** Contents of the Codex `auth.json`, as the CLI writes it. */
 export interface CodexAuth {
   auth_mode?: string;
   OPENAI_API_KEY?: string | null;
@@ -11,30 +11,30 @@ export interface CodexAuth {
   last_refresh?: string;
 }
 
-/** Quem é a conta, extraído das claims do `id_token`. */
+/** Who the account is, taken from the `id_token` claims. */
 export interface Identity {
   email?: string;
   name?: string;
   accountId?: string;
   planType?: string;
-  /** `exp` do JWT, em segundos. */
+  /** The JWT `exp`, in seconds. */
   expiresAt?: number;
 }
 
-/** Uma janela de limite (5h, semanal, …) já normalizada. */
+/** A normalized limit window (5h, weekly, …). */
 export interface UsageWindow {
-  /** Rótulo derivado da duração: "5h", "7d", "30d". */
+  /** Label derived from the duration: "5h", "7d", "30d". */
   label: string;
   usedPercent: number;
   windowDurationMins: number | null;
-  /** Unix timestamp em segundos. */
+  /** Unix timestamp in seconds. */
   resetsAt: number | null;
 }
 
-/** Um conjunto de limites (o Codex devolve um por família de modelo). */
+/** One set of limits — Codex reports one per model family. */
 export interface UsageLimit {
   limitId: string;
-  /** Nome do modelo quando a API o informa (ex.: "GPT-5.3-Codex-Spark"). */
+  /** Model name when the API reports one (e.g. "GPT-5.3-Codex-Spark"). */
   limitName: string | null;
   windows: UsageWindow[];
 }
@@ -47,7 +47,7 @@ export interface UsageSnapshot {
   error?: string;
 }
 
-/** Metadado do perfil. O segredo (o `auth.json`) vive no SecretStorage, nunca aqui. */
+/** Profile metadata. The secret (the `auth.json`) lives in SecretStorage, never here. */
 export interface Profile {
   id: string;
   label: string;
@@ -61,7 +61,7 @@ export interface Profile {
   lastUsage?: UsageSnapshot;
 }
 
-/** Perfil já decorado para a webview. */
+/** A profile decorated for the webview. */
 export interface ProfileView extends Profile {
   active: boolean;
 }

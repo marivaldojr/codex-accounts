@@ -6,8 +6,8 @@ import * as vscode from 'vscode';
 import { CodexAuth } from './types';
 
 /**
- * Resolve o CODEX_HOME na mesma ordem que a CLI e a extensão oficial do Codex:
- * configuração explícita → variável de ambiente → `~/.codex`.
+ * Resolves CODEX_HOME the same way the CLI and the official Codex extension do:
+ * explicit setting → environment variable → `~/.codex`.
  */
 export function resolveCodexHome(): string {
   const configured = vscode.workspace
@@ -32,7 +32,7 @@ export function authFilePath(codexHome = resolveCodexHome()): string {
   return path.join(codexHome, 'auth.json');
 }
 
-/** Lê o `auth.json` ativo. Devolve `null` se não existir ou estiver corrompido. */
+/** Reads the active `auth.json`. Returns `null` if it is missing or corrupt. */
 export function readAuth(codexHome = resolveCodexHome()): CodexAuth | null {
   try {
     const raw = fs.readFileSync(authFilePath(codexHome), 'utf8');
@@ -44,9 +44,9 @@ export function readAuth(codexHome = resolveCodexHome()): CodexAuth | null {
 }
 
 /**
- * Grava o `auth.json` de forma atômica: escreve um temporário no mesmo diretório
- * e renomeia por cima. Um `writeFile` direto deixaria a CLI ler um arquivo pela
- * metade se ela abrisse o arquivo no meio da escrita.
+ * Writes `auth.json` atomically: a temp file in the same directory, then a
+ * rename over the target. A plain `writeFile` would let the CLI read a
+ * half-written file if it opened the file mid-write.
  */
 export async function writeAuth(auth: CodexAuth, codexHome = resolveCodexHome()): Promise<void> {
   const target = authFilePath(codexHome);
@@ -58,10 +58,10 @@ export async function writeAuth(auth: CodexAuth, codexHome = resolveCodexHome())
 }
 
 /**
- * Cria um CODEX_HOME descartável contendo só o `auth.json` do perfil, para
- * consultar os limites de uma conta sem mexer na conta ativa. O `codex
- * app-server` pode renovar o token lá dentro, então o chamador recebe de volta
- * o `auth.json` como ficou.
+ * Creates a throwaway CODEX_HOME holding only the profile's `auth.json`, so one
+ * account's limits can be queried without touching the active account. The
+ * `codex app-server` may refresh the token in there, so the caller gets the
+ * `auth.json` back as it ended up.
  */
 export async function withTemporaryCodexHome<T>(
   auth: CodexAuth,
@@ -85,8 +85,8 @@ export async function withTemporaryCodexHome<T>(
     }
     return { result, refreshedAuth };
   } finally {
-    // Sobrescreve antes de apagar: se o rm falhar (Windows, antivírus, disco
-    // cheio), o que sobra no /tmp é um arquivo vazio, não um token válido.
+    // Overwrite before deleting: if the rm fails (Windows, antivirus, full
+    // disk), what is left behind in /tmp is an empty file, not a live token.
     await fsp.writeFile(authPath, '{}', { mode: 0o600 }).catch(() => undefined);
     await fsp.rm(home, { recursive: true, force: true }).catch(() => undefined);
   }

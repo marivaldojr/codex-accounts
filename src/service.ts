@@ -13,8 +13,11 @@ export interface ActionResult {
   message: string;
 }
 
-/** Quantas contas consultar em paralelo — cada uma sobe um processo `codex`. */
+/** How many accounts to query at once — each one spawns a `codex` process. */
 const USAGE_CONCURRENCY = 3;
+
+/** Messages the panel swallows instead of surfacing as a warning. */
+const SILENT_MESSAGES = new Set(['Canceled.', 'Switch canceled.']);
 
 export class AccountsService {
   private refreshing = false;
@@ -25,13 +28,13 @@ export class AccountsService {
     private readonly onChange: () => void,
   ) {}
 
-  /** Perfis já marcados com quem está ativo no `auth.json` do CODEX_HOME atual. */
+  /** Profiles, flagged with whichever one is active in the current CODEX_HOME. */
   listView(): ProfileView[] {
     const active = this.store.findByIdentity(readIdentity(readAuth()));
     return this.store.list().map((profile) => ({ ...profile, active: profile.id === active?.id }));
   }
 
-  /** A conta que está no `auth.json` ainda não salva como perfil, se houver. */
+  /** The account sitting in `auth.json` that is not saved as a profile yet, if any. */
   unsavedCurrent(): { email?: string; planType?: string } | null {
     const auth = readAuth();
     if (!isUsableAuth(auth)) {
@@ -49,52 +52,52 @@ export class AccountsService {
     if (!isUsableAuth(auth)) {
       return {
         ok: false,
-        message: `Nenhuma conta conectada em ${resolveCodexHome()}. Entre com "codex login" antes de salvar.`,
+        message: `No account signed in at ${resolveCodexHome()}. Run "codex login" before saving.`,
       };
     }
     const identity = readIdentity(auth);
     const existing = this.store.findByIdentity(identity);
     if (existing) {
-      // Mesma conta já salva: atualiza os tokens em vez de duplicar o perfil.
+      // Same account already saved: refresh its tokens instead of duplicating it.
       await this.store.refreshAuth(existing.id, auth);
       this.onChange();
-      return { ok: true, message: `"${existing.label}" já estava salvo — tokens atualizados.` };
+      return { ok: true, message: `"${existing.label}" was already saved — tokens updated.` };
     }
 
-    const suggested = identity.email ?? identity.name ?? 'Conta Codex';
+    const suggested = identity.email ?? identity.name ?? 'Codex account';
     const chosen =
       label ??
       (await vscode.window.showInputBox({
-        prompt: 'Nome do perfil',
+        prompt: 'Profile name',
         value: suggested,
-        validateInput: (value) => (value.trim() ? undefined : 'Informe um nome.'),
+        validateInput: (value) => (value.trim() ? undefined : 'Enter a name.'),
       }));
     if (!chosen) {
-      return { ok: false, message: 'Cancelado.' };
+      return { ok: false, message: 'Canceled.' };
     }
 
     const profile = await this.store.add(chosen.trim(), auth);
     this.onChange();
     void this.refreshOne(profile.id);
-    return { ok: true, message: `"${profile.label}" salvo.` };
+    return { ok: true, message: `"${profile.label}" saved.` };
   }
 
   async switchTo(id: string): Promise<ActionResult> {
     const profile = this.store.get(id);
     if (!profile) {
-      return { ok: false, message: 'Perfil não encontrado.' };
+      return { ok: false, message: 'Profile not found.' };
     }
     const auth = await this.store.getAuth(id);
     if (!isUsableAuth(auth)) {
       return {
         ok: false,
-        message: `"${profile.label}" não tem credenciais válidas. Entre de novo com "codex login" e salve o perfil.`,
+        message: `"${profile.label}" has no usable credentials. Sign in again with "codex login" and save the profile.`,
       };
     }
 
-    // Antes de sobrescrever, guarda a conta que está no arquivo se ela ainda não
-    // for um perfil — senão a troca descarta uma sessão que o usuário teria de
-    // refazer pelo login.
+    // Before overwriting, save whatever account is in the file if it is not a
+    // profile yet — otherwise the switch discards a session the user would have
+    // to recreate through the login flow.
     const current = readAuth();
     if (isUsableAuth(current)) {
       const currentIdentity = readIdentity(current);
@@ -103,15 +106,15 @@ export class AccountsService {
         await this.store.refreshAuth(known.id, current);
       } else {
         const answer = await vscode.window.showWarningMessage(
-          `A conta ativa (${currentIdentity.email ?? 'desconhecida'}) não está salva. Trocar agora faz você perder o acesso a ela.`,
+          `The active account (${currentIdentity.email ?? 'unknown'}) is not saved. Switching now loses access to it.`,
           { modal: true },
-          'Salvar e trocar',
-          'Trocar mesmo assim',
+          'Save and switch',
+          'Switch anyway',
         );
         if (!answer) {
-          return { ok: false, message: 'Troca cancelada.' };
+          return { ok: false, message: 'Switch canceled.' };
         }
-        if (answer === 'Salvar e trocar') {
+        if (answer === 'Save and switch') {
           const saved = await this.saveCurrent();
           if (!saved.ok) {
             return saved;
@@ -123,7 +126,7 @@ export class AccountsService {
     await writeAuth(auth);
     this.onChange();
     await this.promptReload(profile);
-    return { ok: true, message: `Agora usando "${profile.label}".` };
+    return { ok: true, message: `Now using "${profile.label}".` };
   }
 
   private async promptReload(profile: Profile): Promise<void> {
@@ -135,11 +138,11 @@ export class AccountsService {
       return;
     }
     const answer = await vscode.window.showInformationMessage(
-      `Agora usando "${profile.label}". O Codex só assume a conta nova depois de recarregar a janela.`,
-      'Recarregar',
-      'Depois',
+      `Now using "${profile.label}". Codex only picks up the new account after the window reloads.`,
+      'Reload',
+      'Later',
     );
-    if (answer === 'Recarregar') {
+    if (answer === 'Reload') {
       await vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
   }
@@ -147,40 +150,40 @@ export class AccountsService {
   async rename(id: string): Promise<ActionResult> {
     const profile = this.store.get(id);
     if (!profile) {
-      return { ok: false, message: 'Perfil não encontrado.' };
+      return { ok: false, message: 'Profile not found.' };
     }
     const label = await vscode.window.showInputBox({
-      prompt: 'Novo nome do perfil',
+      prompt: 'New profile name',
       value: profile.label,
-      validateInput: (value) => (value.trim() ? undefined : 'Informe um nome.'),
+      validateInput: (value) => (value.trim() ? undefined : 'Enter a name.'),
     });
     if (!label) {
-      return { ok: false, message: 'Cancelado.' };
+      return { ok: false, message: 'Canceled.' };
     }
     await this.store.rename(id, label.trim());
     this.onChange();
-    return { ok: true, message: 'Perfil renomeado.' };
+    return { ok: true, message: 'Profile renamed.' };
   }
 
   async remove(id: string): Promise<ActionResult> {
     const profile = this.store.get(id);
     if (!profile) {
-      return { ok: false, message: 'Perfil não encontrado.' };
+      return { ok: false, message: 'Profile not found.' };
     }
     const answer = await vscode.window.showWarningMessage(
-      `Remover o perfil "${profile.label}"? As credenciais guardadas somem, e para voltar a usar essa conta será preciso fazer login de novo.`,
+      `Remove the profile "${profile.label}"? The stored credentials go with it, and using that account again will require a fresh login.`,
       { modal: true },
-      'Remover',
+      'Remove',
     );
-    if (answer !== 'Remover') {
-      return { ok: false, message: 'Cancelado.' };
+    if (answer !== 'Remove') {
+      return { ok: false, message: 'Canceled.' };
     }
     await this.store.remove(id);
     this.onChange();
-    return { ok: true, message: `"${profile.label}" removido.` };
+    return { ok: true, message: `"${profile.label}" removed.` };
   }
 
-  /** Abre um terminal com `codex login` no CODEX_HOME ativo. */
+  /** Opens a terminal running `codex login` against the active CODEX_HOME. */
   login(): ActionResult {
     const { command } = resolveCodexCommand();
     const terminal = vscode.window.createTerminal({
@@ -191,22 +194,23 @@ export class AccountsService {
     terminal.sendText(`${command} login`);
     return {
       ok: true,
-      message: 'Depois de concluir o login no navegador, use "Salvar conta atual".',
+      message: 'Once the browser login finishes, use "Save current account".',
     };
   }
 
   /**
-   * Manda um prompt mínimo pela conta do perfil, num CODEX_HOME descartável.
-   * Serve para abrir a janela de uso de uma conta parada sem trocar a ativa.
+   * Sends a minimal prompt through the profile's account, in a throwaway
+   * CODEX_HOME. Useful to open the usage window of an idle account without
+   * switching the active one.
    */
   async warmup(id: string): Promise<ActionResult> {
     const profile = this.store.get(id);
     if (!profile) {
-      return { ok: false, message: 'Perfil não encontrado.' };
+      return { ok: false, message: 'Profile not found.' };
     }
     const auth = await this.store.getAuth(id);
     if (!isUsableAuth(auth)) {
-      return { ok: false, message: `"${profile.label}" não tem credenciais válidas.` };
+      return { ok: false, message: `"${profile.label}" has no usable credentials.` };
     }
 
     const config = vscode.workspace.getConfiguration('codexAccounts');
@@ -227,14 +231,14 @@ export class AccountsService {
     }
 
     if (result.timedOut) {
-      return { ok: false, message: `Aquecimento de "${profile.label}" estourou o tempo.` };
+      return { ok: false, message: `Warmup for "${profile.label}" timed out.` };
     }
     if (result.code !== 0) {
       const detail = (result.stderr || result.stdout).trim().slice(-300);
-      return { ok: false, message: `Aquecimento de "${profile.label}" falhou: ${detail || 'erro desconhecido.'}` };
+      return { ok: false, message: `Warmup for "${profile.label}" failed: ${detail || 'unknown error.'}` };
     }
     await this.refreshOne(id);
-    return { ok: true, message: `"${profile.label}" aquecido.` };
+    return { ok: true, message: `"${profile.label}" warmed up.` };
   }
 
   private run(
@@ -274,19 +278,19 @@ export class AccountsService {
   }
 
   /**
-   * Abre uma janela do VS Code apontada para um CODEX_HOME próprio do perfil,
-   * para usar duas contas ao mesmo tempo. Best-effort: depende de a nova janela
-   * herdar o ambiente, o que não vale quando o VS Code reaproveita um servidor
-   * remoto já em execução (Remote-SSH, WSL, dev container).
+   * Opens a VS Code window pointed at a CODEX_HOME of the profile's own, so two
+   * accounts can be used side by side. Best-effort: it depends on the new window
+   * inheriting the environment, which does not hold when VS Code reuses an
+   * already-running remote server (Remote-SSH, WSL, dev containers).
    */
   async openIndependentWindow(id: string, globalStoragePath: string): Promise<ActionResult> {
     const profile = this.store.get(id);
     if (!profile) {
-      return { ok: false, message: 'Perfil não encontrado.' };
+      return { ok: false, message: 'Profile not found.' };
     }
     const auth = await this.store.getAuth(id);
     if (!isUsableAuth(auth)) {
-      return { ok: false, message: `"${profile.label}" não tem credenciais válidas.` };
+      return { ok: false, message: `"${profile.label}" has no usable credentials.` };
     }
 
     const home = path.join(globalStoragePath, 'homes', profile.id);
@@ -302,18 +306,18 @@ export class AccountsService {
     terminal.sendText(`code -n ${JSON.stringify(folder)} || ${command} --help`);
     return {
       ok: true,
-      message: `CODEX_HOME de "${profile.label}" em ${home}. A janela nova só usa essa conta se herdar o ambiente do terminal.`,
+      message: `CODEX_HOME for "${profile.label}" is at ${home}. The new window only uses that account if it inherits the terminal's environment.`,
     };
   }
 
-  /** Atualiza os limites de um perfil só. */
+  /** Refreshes the limits for a single profile. */
   async refreshOne(id: string): Promise<void> {
     const auth = await this.store.getAuth(id);
     if (!isUsableAuth(auth)) {
       await this.store.setUsage(id, {
         fetchedAt: Date.now(),
         limits: [],
-        error: 'sem credenciais válidas.',
+        error: 'no usable credentials.',
       });
       this.onChange();
       return;
@@ -326,7 +330,7 @@ export class AccountsService {
     this.onChange();
   }
 
-  /** Atualiza todos os perfis, em lotes, para não subir N processos de uma vez. */
+  /** Refreshes every profile, in batches, so N processes do not start at once. */
   async refreshAll(): Promise<void> {
     if (this.refreshing) {
       return;
@@ -345,5 +349,9 @@ export class AccountsService {
 
   get isRefreshing(): boolean {
     return this.refreshing;
+  }
+
+  static isSilent(message: string): boolean {
+    return SILENT_MESSAGES.has(message);
   }
 }
