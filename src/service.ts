@@ -1,8 +1,7 @@
-import { spawn } from 'child_process';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { resolveCodexCommand } from './cli';
-import { readAuth, resolveCodexHome, withTemporaryCodexHome, writeAuth } from './codex-home';
+import { readAuth, resolveCodexHome, writeAuth } from './codex-home';
 import { isUsableAuth, readIdentity } from './identity';
 import { ProfileStore } from './store';
 import { Profile, ProfileView } from './types';
@@ -196,85 +195,6 @@ export class AccountsService {
       ok: true,
       message: 'Once the browser login finishes, use "Save current account".',
     };
-  }
-
-  /**
-   * Sends a minimal prompt through the profile's account, in a throwaway
-   * CODEX_HOME. Useful to open the usage window of an idle account without
-   * switching the active one.
-   */
-  async warmup(id: string): Promise<ActionResult> {
-    const profile = this.store.get(id);
-    if (!profile) {
-      return { ok: false, message: 'Profile not found.' };
-    }
-    const auth = await this.store.getAuth(id);
-    if (!isUsableAuth(auth)) {
-      return { ok: false, message: `"${profile.label}" has no usable credentials.` };
-    }
-
-    const config = vscode.workspace.getConfiguration('codexAccounts');
-    const prompt = config.get<string>('warmupPrompt', 'Hi').trim() || 'Hi';
-    const model = config.get<string>('warmupModel', '').trim();
-    const timeoutMs = Math.max(15, config.get<number>('warmupTimeoutSeconds', 120)) * 1000;
-
-    const { result, refreshedAuth } = await withTemporaryCodexHome(auth, async (codexHome) => {
-      const args = ['exec', '--skip-git-repo-check', '--sandbox', 'read-only'];
-      if (model) {
-        args.push('--model', model);
-      }
-      args.push(prompt);
-      return this.run(args, codexHome, timeoutMs);
-    });
-    if (refreshedAuth) {
-      await this.store.refreshAuth(id, refreshedAuth);
-    }
-
-    if (result.timedOut) {
-      return { ok: false, message: `Warmup for "${profile.label}" timed out.` };
-    }
-    if (result.code !== 0) {
-      const detail = (result.stderr || result.stdout).trim().slice(-300);
-      return { ok: false, message: `Warmup for "${profile.label}" failed: ${detail || 'unknown error.'}` };
-    }
-    await this.refreshOne(id);
-    return { ok: true, message: `"${profile.label}" warmed up.` };
-  }
-
-  private run(
-    args: string[],
-    codexHome: string,
-    timeoutMs: number,
-  ): Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean }> {
-    const { command } = resolveCodexCommand();
-    return new Promise((resolve) => {
-      const child = spawn(command, args, {
-        env: { ...process.env, CODEX_HOME: codexHome },
-        cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(),
-        windowsHide: true,
-      });
-      let stdout = '';
-      let stderr = '';
-      let timedOut = false;
-      const timer = setTimeout(() => {
-        timedOut = true;
-        child.kill();
-      }, timeoutMs);
-      child.stdout?.on('data', (chunk: Buffer) => {
-        stdout += chunk.toString('utf8');
-      });
-      child.stderr?.on('data', (chunk: Buffer) => {
-        stderr += chunk.toString('utf8');
-      });
-      child.on('error', (error) => {
-        clearTimeout(timer);
-        resolve({ code: -1, stdout, stderr: error.message, timedOut });
-      });
-      child.on('close', (code) => {
-        clearTimeout(timer);
-        resolve({ code, stdout, stderr, timedOut });
-      });
-    });
   }
 
   /**

@@ -70,11 +70,6 @@
         "icon": "$(sign-in)"
       },
       {
-        "command": "codexAccounts.warmup",
-        "title": "Codex Accounts: Warm up account (Hi)",
-        "icon": "$(comment)"
-      },
-      {
         "command": "codexAccounts.openWindow",
         "title": "Codex Accounts: Open independent window",
         "icon": "$(window)"
@@ -149,22 +144,6 @@
           "minimum": 1,
           "maximum": 100,
           "markdownDescription": "Usage threshold (%) above which the limit bar turns red."
-        },
-        "codexAccounts.warmupModel": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "Model passed to `codex exec` during a warmup (the Hi button). Empty = the profile's default model."
-        },
-        "codexAccounts.warmupPrompt": {
-          "type": "string",
-          "default": "Hi",
-          "markdownDescription": "Prompt used for warmups (the Hi button)."
-        },
-        "codexAccounts.warmupTimeoutSeconds": {
-          "type": "number",
-          "default": 120,
-          "minimum": 15,
-          "markdownDescription": "Maximum time to wait for a warmup command."
         }
       }
     }

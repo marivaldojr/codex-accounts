@@ -72,10 +72,6 @@ export function activate(context: vscode.ExtensionContext): void {
       withPick('Switch to which account?', (profile) => service.switchTo(profile.id)),
     ),
     vscode.commands.registerCommand(
-      'codexAccounts.warmup',
-      withPick('Warm up which account?', (profile) => service.warmup(profile.id)),
-    ),
-    vscode.commands.registerCommand(
       'codexAccounts.openWindow',
       withPick('Open a window for which account?', (profile) =>
         service.openIndependentWindow(profile.id, context.globalStorageUri.fsPath),

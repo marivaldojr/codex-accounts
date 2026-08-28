@@ -13,8 +13,6 @@ just to find out how much is left on each.
 - **Isolated usage reads:** each account's limits are queried in a throwaway
   `CODEX_HOME`, so checking usage does **not** switch the active account or
   invalidate a session in progress.
-- **Warmup (Hi):** sends a minimal prompt through an idle account, also in an
-  isolated environment, to open its usage window.
 - **Login** from a terminal (`codex login`) without leaving the editor.
 
 ## How it works
@@ -62,9 +60,6 @@ workspaces.
 | `codexAccounts.codexHome` | `""` | Explicit `CODEX_HOME`. Empty = env var, or `~/.codex`. |
 | `codexAccounts.codexCommand` | `codex` | Codex CLI command. |
 | `codexAccounts.warnThresholdPercent` | `80` | Where the usage bar turns red. |
-| `codexAccounts.warmupModel` | `""` | Model used for warmups. Empty = profile default. |
-| `codexAccounts.warmupPrompt` | `Hi` | Prompt used for warmups. |
-| `codexAccounts.warmupTimeoutSeconds` | `120` | Warmup timeout. |
 
 ## Known limitations
 

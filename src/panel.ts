@@ -66,8 +66,6 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
         return;
       case 'switch':
         return this.report(await this.service.switchTo(id));
-      case 'warmup':
-        return this.report(await this.service.warmup(id));
       case 'window':
         return this.report(await this.service.openIndependentWindow(id, this.globalStoragePath));
       case 'rename':

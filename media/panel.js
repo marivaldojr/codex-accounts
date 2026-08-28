@@ -126,7 +126,6 @@
     if (!profile.active) {
       actions.append(actionButton('Switch', 'switch', profile.id, 'Use this account'));
     }
-    actions.append(actionButton('Hi', 'warmup', profile.id, 'Send a minimal prompt through this account'));
     actions.append(actionButton('✎', 'rename', profile.id, 'Rename'));
     actions.append(actionButton('\u{1F5D1}', 'remove', profile.id, 'Remove', 'danger'));
     card.append(actions);
