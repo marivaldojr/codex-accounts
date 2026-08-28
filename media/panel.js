@@ -1,7 +1,6 @@
 (function () {
   const vscode = acquireVsCodeApi();
   const list = document.getElementById('accounts');
-  const caption = document.getElementById('caption');
   const empty = document.getElementById('empty');
   const unsaved = document.getElementById('unsaved');
   const home = document.getElementById('home');
@@ -213,9 +212,14 @@
   function render(state) {
     warnThreshold = state.warnThreshold || 80;
 
-    // Most room first, so the account to switch to is the one at the top.
-    // Accounts with no reading sink to the bottom rather than posing as full.
+    // The account in use is pinned to the top: it is the one being spent, so
+    // its numbers are what the panel is opened to read. Everything below it is
+    // most room first, so the account to switch to is the next one down, and
+    // accounts with no reading sink to the bottom rather than posing as full.
     const ordered = [...state.profiles].sort((a, b) => {
+      if (a.active !== b.active) {
+        return a.active ? -1 : 1;
+      }
       const left = runway(a);
       const right = runway(b);
       if (left === right) {
@@ -233,8 +237,6 @@
     const busy = new Set(state.pending || []);
     list.replaceChildren(...ordered.map((profile) => accountNode(profile, busy.has(profile.id))));
     empty.hidden = ordered.length > 0;
-    caption.hidden = ordered.length < 2;
-    caption.textContent = 'least used first';
 
     if (state.unsaved) {
       unsaved.textContent = `${state.unsaved.email || 'An account'} is signed in but not saved here. Save it before switching, or it is gone.`;
