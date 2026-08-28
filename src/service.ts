@@ -4,7 +4,7 @@ import { resolveCodexCommand } from './cli';
 import { readAuth, resolveCodexHome, writeAuth } from './codex-home';
 import { isUsableAuth, readIdentity } from './identity';
 import { ProfileStore } from './store';
-import { Profile, ProfileView } from './types';
+import { CodexAuth, Profile, ProfileView } from './types';
 import { fetchUsage } from './usage';
 
 export interface ActionResult {
@@ -241,24 +241,45 @@ export class AccountsService {
     this.pending.add(id);
     this.onChange();
     try {
-      const auth = await this.store.getAuth(id);
+      // For the account that is live, the file on disk is the source of truth,
+      // not our copy: Codex refreshes it as the user works, and OAuth rotation
+      // revokes whatever token we were holding. Reading the copy would fail
+      // against credentials the user never stopped using.
+      const live = readAuth();
+      const active = isUsableAuth(live) && this.isSameAccount(id, live);
+      const auth = active ? live : await this.store.getAuth(id);
       if (!isUsableAuth(auth)) {
         await this.store.setUsage(id, {
           fetchedAt: Date.now(),
           limits: [],
-          error: 'no usable credentials.',
+          error: 'No stored credentials — log in and save this account again.',
+          errorKind: 'auth',
         });
         return;
       }
+
       const { snapshot, refreshedAuth } = await fetchUsage(auth, this.clientVersion);
       if (refreshedAuth) {
         await this.store.refreshAuth(id, refreshedAuth);
+        // Rotation invalidates the token we started from. If that token is also
+        // the one the user's Codex is running on, the live file has to receive
+        // the replacement — otherwise checking usage logs them out.
+        if (active) {
+          await writeAuth(refreshedAuth);
+        }
       }
       await this.store.setUsage(id, snapshot);
     } finally {
       this.pending.delete(id);
       this.onChange();
     }
+  }
+
+  /** Whether a profile is the account currently in the live `auth.json`. */
+  private isSameAccount(id: string, live: CodexAuth): boolean {
+    const profile = this.store.get(id);
+    const accountId = readIdentity(live).accountId;
+    return Boolean(profile?.accountId && accountId && profile.accountId === accountId);
   }
 
   /** Refreshes every profile, in batches, so N processes do not start at once. */

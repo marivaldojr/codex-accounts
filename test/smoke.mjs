@@ -12,7 +12,7 @@ Module._resolveFilename = function (request, ...rest) {
 
 const { readIdentity, isUsableAuth } = require('../out/identity.js');
 const { readAuth, resolveCodexHome } = require('../out/codex-home.js');
-const { normalizeRateLimits, windowLabel, fetchUsage } = require('../out/usage.js');
+const { normalizeRateLimits, windowLabel, fetchUsage, describeFailure } = require('../out/usage.js');
 
 let failures = 0;
 const check = (name, fn) => {
@@ -46,6 +46,20 @@ check('out-of-range percent is clamped', () => {
   const s = normalizeRateLimits({ rateLimits: { primary: { usedPercent: 180, windowDurationMins: 300 } } });
   assert.equal(s.limits[0].windows[0].usedPercent, 100);
 });
+
+console.log('\ndescribeFailure (classifying what the app-server reports)');
+const revoked = 'failed to fetch codex rate limits: GET https://chatgpt.com/backend-api/wham/usage failed: 401 Unauthorized; content-type=text/plain; body={ "error": { "message": "Encountered invalidated oauth token for user, failing request", "type": null, "code": "token_revoked", "param": null }, "status": 401 }';
+check('a revoked token is an auth failure', () => assert.equal(describeFailure(revoked).errorKind, 'auth'));
+check('and says so in one line', () => assert.equal(describeFailure(revoked).error, 'Signed out — this account needs to log in again.'));
+check('keeping the raw text for the tooltip', () => assert.equal(describeFailure(revoked).errorDetail, revoked));
+check('a missing CLI is not an auth failure', () => {
+  const d = describeFailure('could not start codex app-server: spawn codex ENOENT');
+  assert.equal(d.errorKind, 'other');
+  assert.match(d.error, /Codex CLI not found/);
+});
+check('a timeout is not an auth failure', () => assert.equal(describeFailure('timed out waiting for initialize.').errorKind, 'other'));
+check('an unreachable host is not an auth failure', () => assert.equal(describeFailure('getaddrinfo EAI_AGAIN chatgpt.com').errorKind, 'other'));
+check('anything unrecognised still gets a message', () => assert.ok(describeFailure('kaboom').error));
 
 console.log('\nidentity (real auth.json, read-only)');
 const auth = readAuth();

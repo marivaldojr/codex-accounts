@@ -44,7 +44,11 @@ export interface UsageSnapshot {
   planType?: string;
   limits: UsageLimit[];
   credits?: { balance: string; unlimited: boolean; hasCredits: boolean };
+  /** Short, readable reason. The raw text goes in `errorDetail`. */
   error?: string;
+  /** `auth` means the stored credentials are dead and only a login fixes it. */
+  errorKind?: 'auth' | 'other';
+  errorDetail?: string;
 }
 
 /** Profile metadata. The secret (the `auth.json`) lives in SecretStorage, never here. */

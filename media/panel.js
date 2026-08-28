@@ -174,16 +174,25 @@
       }
     }
 
+    const broken = !busy && usage && usage.errorKind === 'auth';
     if (busy) {
       node.append(el('div', 'note', 'checking…'));
     } else if (usage && usage.error) {
-      node.append(el('div', 'note error', usage.error));
+      const note = el('div', 'note error', usage.error);
+      if (usage.errorDetail) {
+        note.title = usage.errorDetail;
+      }
+      node.append(note);
     } else {
       node.append(el('div', 'note', ago(usage && usage.fetchedAt)));
     }
 
     const actions = el('div', 'actions');
-    if (!profile.active) {
+    if (broken) {
+      // Switching to revoked credentials would write a dead auth.json and sign
+      // the user out of Codex, so the card offers the repair instead.
+      actions.append(button('Log in', 'login', profile.id, 'Sign in to this account again', 'use'));
+    } else if (!profile.active) {
       actions.append(button('Use', 'switch', profile.id, 'Make this the active account', 'use'));
     }
     actions.append(button('Window', 'window', profile.id, 'Open a window with its own CODEX_HOME'));

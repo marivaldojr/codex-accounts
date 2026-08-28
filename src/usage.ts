@@ -299,13 +299,29 @@ export async function fetchUsage(
     });
     return { snapshot: normalizeRateLimits(result), refreshedAuth };
   } catch (error) {
-    return {
-      snapshot: {
-        fetchedAt: Date.now(),
-        limits: [],
-        error: error instanceof Error ? error.message : String(error),
-      },
-      refreshedAuth: null,
-    };
+    const detail = error instanceof Error ? error.message : String(error);
+    return { snapshot: { fetchedAt: Date.now(), limits: [], ...describeFailure(detail) }, refreshedAuth: null };
   }
+}
+
+/**
+ * Turns the app-server's raw failure into something worth showing. The only
+ * distinction the panel acts on is whether the credentials themselves are dead
+ * — nothing but a fresh login recovers from that, so it must not read like a
+ * transient hiccup. The raw text is kept for the tooltip.
+ */
+export function describeFailure(detail: string): Pick<UsageSnapshot, 'error' | 'errorKind' | 'errorDetail'> {
+  if (/token[_ ]revoked|invalidated oauth token|\b401\b|unauthorized/i.test(detail)) {
+    return { error: 'Signed out — this account needs to log in again.', errorKind: 'auth', errorDetail: detail };
+  }
+  if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|network|dns/i.test(detail)) {
+    return { error: 'Could not reach OpenAI.', errorKind: 'other', errorDetail: detail };
+  }
+  if (/could not start codex app-server|ENOENT/i.test(detail)) {
+    return { error: 'Codex CLI not found — check codexAccounts.codexCommand.', errorKind: 'other', errorDetail: detail };
+  }
+  if (/timed out/i.test(detail)) {
+    return { error: 'Timed out reading limits.', errorKind: 'other', errorDetail: detail };
+  }
+  return { error: 'Could not read limits.', errorKind: 'other', errorDetail: detail };
 }
