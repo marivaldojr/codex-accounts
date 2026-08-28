@@ -1,53 +1,16 @@
 (function () {
   const vscode = acquireVsCodeApi();
-  const accounts = document.getElementById('accounts');
+  const list = document.getElementById('accounts');
+  const caption = document.getElementById('caption');
   const empty = document.getElementById('empty');
   const unsaved = document.getElementById('unsaved');
   const home = document.getElementById('home');
 
+  /** Usage above this counts as spent; the panel shows what is left, so it flips. */
   let warnThreshold = 80;
 
   function post(type, id) {
     vscode.postMessage({ type, id });
-  }
-
-  /** Short relative future: "in 1h 10m", "in 3d 10h". */
-  function relativeFuture(unixSeconds) {
-    if (!unixSeconds) {
-      return '';
-    }
-    const seconds = unixSeconds - Math.floor(Date.now() / 1000);
-    if (seconds <= 0) {
-      return 'any moment now';
-    }
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (days > 0) {
-      return `in ${days}d ${hours}h`;
-    }
-    if (hours > 0) {
-      return `in ${hours}h ${minutes}m`;
-    }
-    return `in ${minutes}m`;
-  }
-
-  function relativePast(timestampMs) {
-    if (!timestampMs) {
-      return 'never';
-    }
-    const minutes = Math.floor((Date.now() - timestampMs) / 60000);
-    if (minutes < 1) {
-      return 'just now';
-    }
-    if (minutes < 60) {
-      return `${minutes} min ago`;
-    }
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) {
-      return `${hours}h ago`;
-    }
-    return `${Math.floor(hours / 24)}d ago`;
   }
 
   function el(tag, className, text) {
@@ -61,100 +24,212 @@
     return node;
   }
 
-  function meterNode(title, window) {
-    const meter = el('div', 'meter');
-    const head = el('div', 'meter-head');
-    head.append(el('span', null, title), el('span', null, `${window.usedPercent}%`));
-    const bar = el('div', window.usedPercent >= warnThreshold ? 'bar warn' : 'bar');
-    const fill = el('span');
-    fill.style.width = `${window.usedPercent}%`;
-    bar.append(fill);
-    meter.append(head, bar);
-    const reset = relativeFuture(window.resetsAt);
-    if (reset) {
-      meter.append(el('div', 'reset', `resets ${reset}`));
+  /** Compact duration from now: "3d 10h", "1h 10m", "12m". */
+  function until(unixSeconds) {
+    if (!unixSeconds) {
+      return null;
     }
-    return meter;
+    const seconds = unixSeconds - Math.floor(Date.now() / 1000);
+    if (seconds <= 0) {
+      return 'any moment';
+    }
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    }
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   }
 
-  function actionButton(label, action, id, title, className) {
-    const button = el('button', className, label);
-    button.title = title || label;
-    button.addEventListener('click', () => post(action, id));
-    return button;
+  function ago(timestampMs) {
+    if (!timestampMs) {
+      return 'never checked';
+    }
+    const minutes = Math.floor((Date.now() - timestampMs) / 60000);
+    if (minutes < 1) {
+      return 'checked just now';
+    }
+    if (minutes < 60) {
+      return `checked ${minutes} min ago`;
+    }
+    const hours = Math.floor(minutes / 60);
+    return hours < 24 ? `checked ${hours}h ago` : `checked ${Math.floor(hours / 24)}d ago`;
   }
 
-  function cardNode(profile) {
-    const card = el('div', profile.active ? 'card active' : 'card');
+  const freeOf = (window) => 100 - window.usedPercent;
 
-    const head = el('div', 'card-head');
-    head.append(el('span', 'label', profile.label));
-    if (profile.planType) {
-      head.append(el('span', 'badge', profile.planType));
+  /** Severity from what is left, not what was spent. */
+  function severity(free) {
+    if (free === null) {
+      return 'unknown';
     }
+    if (free <= 0) {
+      return 'out';
+    }
+    return free <= 100 - warnThreshold ? 'low' : 'ok';
+  }
+
+  /**
+   * The account-wide limit ("codex") is what gates every request, so it drives
+   * the headline. Model families are reported separately and shown below it.
+   */
+  function accountLimit(usage) {
+    if (!usage || !usage.limits || usage.limits.length === 0) {
+      return null;
+    }
+    return usage.limits.find((limit) => limit.limitId === 'codex') || usage.limits[0];
+  }
+
+  /** How much room is left on the tightest window of the account-wide limit. */
+  function runway(profile) {
+    const limit = accountLimit(profile.lastUsage);
+    if (!limit) {
+      return null;
+    }
+    return Math.min(...limit.windows.map(freeOf));
+  }
+
+  function windowRow(window) {
+    const row = el('li');
+    row.append(el('span', 'w', window.label));
+    const free = freeOf(window);
+    const reset = until(window.resetsAt);
+    let text;
+    if (window.usedPercent === 0) {
+      text = 'untouched';
+    } else if (free <= 0) {
+      text = reset ? `spent · back in ${reset}` : 'spent';
+    } else {
+      text = reset ? `${free}% left · ${reset}` : `${free}% left`;
+    }
+    row.append(el('span', free <= 0 ? 'v exhausted' : 'v', text));
+    return row;
+  }
+
+  function windowList(windows, className) {
+    const ul = el('ul', className);
+    for (const window of windows) {
+      ul.append(windowRow(window));
+    }
+    return ul;
+  }
+
+  function button(label, action, id, title, className) {
+    const node = el('button', className, label);
+    node.title = title || label;
+    node.addEventListener('click', () => post(action, id));
+    return node;
+  }
+
+  function accountNode(profile) {
+    const node = el('article', profile.active ? 'account active' : 'account');
+
+    const head = el('div', 'account-head');
+    head.append(el('span', 'name', profile.label));
     if (profile.active) {
-      head.append(el('span', 'badge active', 'active'));
+      head.append(el('span', 'active-tag', 'in use'));
     }
-    head.append(el('span', 'spacer'));
-    head.append(actionButton('↻', 'refreshOne', profile.id, 'Refresh this account'));
-    card.append(head);
+    node.append(head);
 
     if (profile.email) {
-      card.append(el('div', 'email', profile.email));
+      node.append(el('div', 'email', profile.email));
     }
 
+    const free = runway(profile);
+    const level = severity(free);
+
+    const headline = el('div', 'headline');
+    headline.append(el('span', `figure ${level}`, free === null ? '—' : `${free}%`));
+    headline.append(el('span', 'figure-label', free === null ? 'no reading' : 'left'));
+    if (profile.planType) {
+      headline.append(el('span', 'plan', profile.planType));
+    }
+    node.append(headline);
+
+    const track = el('div', `track ${level}`);
+    const fill = el('span');
+    fill.style.width = `${free === null ? 0 : free}%`;
+    track.append(fill);
+    node.append(track);
+
     const usage = profile.lastUsage;
-    if (usage && usage.limits && usage.limits.length > 0) {
+    const main = accountLimit(usage);
+    if (main) {
+      node.append(windowList(main.windows, 'windows'));
       for (const limit of usage.limits) {
-        if (limit.limitName) {
-          card.append(el('div', 'limit-name', limit.limitName));
+        if (limit === main) {
+          continue;
         }
-        for (const window of limit.windows) {
-          card.append(meterNode(window.label, window));
-        }
+        node.append(el('div', 'family', limit.limitName || limit.limitId));
+        node.append(windowList(limit.windows, 'windows sub'));
       }
     }
 
     if (usage && usage.error) {
-      card.append(el('div', 'meta error', usage.error));
+      node.append(el('div', 'note error', usage.error));
     } else {
-      card.append(el('div', 'meta', `updated ${relativePast(usage && usage.fetchedAt)}`));
+      node.append(el('div', 'note', ago(usage && usage.fetchedAt)));
     }
 
     const actions = el('div', 'actions');
-    actions.append(actionButton('Window', 'window', profile.id, 'Open a window with its own CODEX_HOME'));
     if (!profile.active) {
-      actions.append(actionButton('Switch', 'switch', profile.id, 'Use this account'));
+      actions.append(button('Use', 'switch', profile.id, 'Make this the active account', 'use'));
     }
-    actions.append(actionButton('✎', 'rename', profile.id, 'Rename'));
-    actions.append(actionButton('\u{1F5D1}', 'remove', profile.id, 'Remove', 'danger'));
-    card.append(actions);
+    actions.append(button('Window', 'window', profile.id, 'Open a window with its own CODEX_HOME'));
+    actions.append(el('span', 'grow'));
+    actions.append(button('↻', 'refreshOne', profile.id, 'Check this account now'));
+    actions.append(button('✎', 'rename', profile.id, 'Rename'));
+    actions.append(button('\u{1F5D1}', 'remove', profile.id, 'Remove', 'danger'));
+    node.append(actions);
 
-    return card;
+    return node;
   }
 
   function render(state) {
     warnThreshold = state.warnThreshold || 80;
 
-    accounts.replaceChildren(...state.profiles.map(cardNode));
-    empty.hidden = state.profiles.length > 0;
+    // Most room first, so the account to switch to is the one at the top.
+    // Accounts with no reading sink to the bottom rather than posing as full.
+    const ordered = [...state.profiles].sort((a, b) => {
+      const left = runway(a);
+      const right = runway(b);
+      if (left === right) {
+        return a.order - b.order;
+      }
+      if (left === null) {
+        return 1;
+      }
+      if (right === null) {
+        return -1;
+      }
+      return right - left;
+    });
+
+    list.replaceChildren(...ordered.map(accountNode));
+    empty.hidden = ordered.length > 0;
+    caption.hidden = ordered.length < 2;
+    caption.textContent = 'most room first';
 
     if (state.unsaved) {
-      unsaved.textContent = `Signed-in account not saved: ${state.unsaved.email || 'unknown'}. Save it before switching profiles.`;
+      unsaved.textContent = `${state.unsaved.email || 'An account'} is signed in but not saved here. Save it before switching, or it is gone.`;
       unsaved.hidden = false;
     } else {
       unsaved.hidden = true;
     }
 
-    home.textContent = `CODEX_HOME: ${state.codexHome}`;
+    home.textContent = state.codexHome;
 
-    for (const button of document.querySelectorAll('.toolbar button')) {
-      button.disabled = state.refreshing && button.dataset.action === 'refreshAll';
+    for (const node of document.querySelectorAll('.toolbar button')) {
+      node.disabled = state.refreshing && node.dataset.action === 'refreshAll';
     }
   }
 
-  for (const button of document.querySelectorAll('.toolbar button')) {
-    button.addEventListener('click', () => post(button.dataset.action));
+  for (const node of document.querySelectorAll('.toolbar button')) {
+    node.addEventListener('click', () => post(node.dataset.action));
   }
 
   window.addEventListener('message', (event) => {

@@ -100,14 +100,15 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
 </head>
 <body>
 <div class="toolbar">
-  <button class="primary" data-action="saveCurrent">+ Save current account</button>
-  <button data-action="login">Log in</button>
-  <button data-action="refreshAll" title="Refresh usage limits">&#8635;</button>
+  <button class="save" data-action="saveCurrent">+ Save current account</button>
+  <button data-action="login" title="Sign in to another account">Log in</button>
+  <button data-action="refreshAll" title="Check every account">&#8635;</button>
 </div>
 <div id="unsaved" class="hint" hidden></div>
+<div id="caption" class="caption" hidden></div>
 <div id="accounts"></div>
 <div id="empty" class="empty" hidden>
-  No profiles saved yet.<br>Sign in with <code>codex login</code>, then use <b>Save current account</b>.
+  No accounts saved yet.<br>Sign in with <code>codex login</code>, then use <b>Save current account</b>.
 </div>
 <footer id="home"></footer>
 <script nonce="${nonce}" src="${asset('panel.js')}"></script>

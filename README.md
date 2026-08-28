@@ -6,8 +6,12 @@ just to find out how much is left on each.
 
 ## What it does
 
-- **Activity bar panel** with one card per account: plan, email, usage bars per
-  window (5h, 7d, …) and when each window resets.
+- **Activity bar panel** built around what is *left*, not what was spent: each
+  account leads with the room remaining on its tightest window, and the list is
+  ordered most-room-first — so the account to switch to is the one on top.
+- **Per-model limits nested under the account.** Codex reports an account-wide
+  limit plus one per model family (Spark, …); the account-wide one drives the
+  headline, the families sit below it.
 - **Account switching** by writing the profile's `auth.json` into the active
   `CODEX_HOME`.
 - **Isolated usage reads:** each account's limits are queried in a throwaway

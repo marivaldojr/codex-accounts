@@ -1,191 +1,284 @@
 :root {
-  --gap: 8px;
-  --radius: 6px;
+  --rail: 3px;
+  --muted: color-mix(in srgb, var(--vscode-foreground) 55%, transparent);
+  --faint: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
+  --rule: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+  --ok: var(--vscode-charts-green, #3fb950);
+  --low: var(--vscode-charts-yellow, #d29922);
+  --out: var(--vscode-charts-red, #f85149);
 }
 
 body {
   margin: 0;
-  padding: 10px;
+  padding: 12px 12px 20px;
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
   color: var(--vscode-foreground);
   background: transparent;
 }
 
+/* ---------- toolbar ---------- */
+
 .toolbar {
   display: flex;
-  gap: var(--gap);
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 12px;
 }
 
-button {
-  font-family: inherit;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--vscode-button-border, transparent);
-  background: var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.18));
-  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+.toolbar button {
+  font: inherit;
+  font-size: 11px;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
   cursor: pointer;
 }
 
-button:hover {
-  background: var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.3));
+.toolbar button:hover {
+  background: color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+  color: var(--vscode-foreground);
 }
 
-button.primary {
+.toolbar .save {
   flex: 1;
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
+  text-align: left;
+  color: var(--vscode-foreground);
+  background: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
 }
 
-button.primary:hover {
-  background: var(--vscode-button-hoverBackground);
-}
-
-button.danger:hover {
-  background: var(--vscode-inputValidation-errorBackground, rgba(190, 60, 60, 0.35));
-}
-
-button:disabled {
-  opacity: 0.5;
+.toolbar button:disabled {
+  opacity: 0.4;
   cursor: default;
 }
 
+/* ---------- caption ---------- */
+
+.caption {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-bottom: 8px;
+}
+
 .hint {
-  margin-bottom: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(200, 160, 60, 0.6));
-  background: var(--vscode-inputValidation-warningBackground, rgba(200, 160, 60, 0.12));
-  font-size: 12px;
-}
-
-.card {
-  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
-  border-radius: var(--radius);
-  padding: 12px;
   margin-bottom: 12px;
+  padding: 8px 10px;
+  border-left: var(--rail) solid var(--low);
+  background: color-mix(in srgb, var(--low) 10%, transparent);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
-.card.active {
-  border-color: var(--vscode-focusBorder);
+/* ---------- account ---------- */
+
+.account {
+  position: relative;
+  padding: 14px 0 14px 12px;
+  border-top: 1px solid var(--rule);
 }
 
-.card-head {
+.account::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: var(--rail);
+  border-radius: var(--rail);
+  background: var(--faint);
+}
+
+.account.active::before {
+  background: var(--ok);
+}
+
+.account-head {
   display: flex;
-  align-items: center;
-  gap: var(--gap);
-  margin-bottom: 10px;
+  align-items: baseline;
+  gap: 6px;
 }
 
-.label {
+.name {
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.badge {
+.active-tag {
   font-size: 10px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 10px;
-  border: 1px solid currentColor;
-  opacity: 0.85;
-  white-space: nowrap;
-}
-
-.badge.active {
-  color: var(--vscode-charts-green, #4caf50);
-}
-
-.card-head .spacer {
-  flex: 1;
+  color: var(--ok);
 }
 
 .email {
   font-size: 11px;
-  opacity: 0.7;
-  margin: -6px 0 10px;
+  color: var(--faint);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding-top: 2px;
 }
 
-.limit-name {
-  font-size: 11px;
-  opacity: 0.65;
-  margin: 10px 0 4px;
-}
+/* ---------- headline ---------- */
 
-.meter + .meter {
-  margin-top: 8px;
-}
-
-.meter-head {
+.headline {
   display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  margin-bottom: 3px;
+  align-items: baseline;
+  gap: 5px;
+  padding: 8px 0 5px;
 }
 
-.bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--vscode-progressBar-background, rgba(128, 128, 128, 0.25));
+.figure {
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.figure.ok { color: var(--ok); }
+.figure.low { color: var(--low); }
+.figure.out { color: var(--out); }
+.figure.unknown { color: var(--faint); }
+
+.figure-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.plan {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.track {
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
   overflow: hidden;
 }
 
-.bar > span {
+.track > span {
   display: block;
   height: 100%;
-  background: var(--vscode-charts-green, #4caf50);
+  background: var(--ok);
 }
 
-.bar.warn > span {
-  background: var(--vscode-charts-red, #e05252);
+.track.low > span { background: var(--low); }
+.track.out > span { background: var(--out); }
+
+/* ---------- windows ---------- */
+
+.windows {
+  list-style: none;
+  margin: 9px 0 0;
+  padding: 0;
 }
 
-.reset {
+.windows li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-size: 11px;
-  opacity: 0.6;
-  margin-top: 3px;
+  padding: 2px 0;
 }
 
-.meta {
-  font-size: 11px;
-  opacity: 0.6;
-  margin: 10px 0 8px;
+.windows .w {
+  min-width: 22px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
 }
 
-.meta.error {
-  color: var(--vscode-errorForeground, #e05252);
-  opacity: 1;
+.windows .v {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
+
+.windows .v.exhausted {
+  color: var(--out);
+}
+
+.family {
+  display: flex;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  padding: 7px 0 1px;
+}
+
+.family::before {
+  content: '\21B3';
+}
+
+.note {
+  font-size: 10px;
+  color: var(--faint);
+  padding-top: 9px;
+}
+
+.note.error {
+  color: var(--out);
+}
+
+/* ---------- actions ---------- */
 
 .actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: 2px;
+  padding-top: 9px;
+  margin-left: -6px;
 }
 
 .actions button {
-  flex: 1;
-  min-width: 62px;
+  font: inherit;
+  font-size: 11px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
 }
 
+.actions button:hover {
+  background: color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+  color: var(--vscode-foreground);
+}
+
+.actions button.use {
+  color: var(--vscode-textLink-foreground);
+}
+
+.actions .grow {
+  flex: 1;
+}
+
+.actions button.danger:hover {
+  background: color-mix(in srgb, var(--out) 18%, transparent);
+  color: var(--out);
+}
+
+/* ---------- empty / footer ---------- */
+
 .empty {
-  padding: 16px 4px;
-  font-size: 12px;
-  opacity: 0.7;
-  line-height: 1.6;
+  padding: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
 }
 
 footer {
-  margin-top: 14px;
+  padding-top: 18px;
   font-size: 10px;
-  opacity: 0.45;
+  color: var(--faint);
   word-break: break-all;
 }
