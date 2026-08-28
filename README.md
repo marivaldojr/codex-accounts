@@ -4,6 +4,10 @@ Switch between multiple Codex (ChatGPT) accounts in VS Code, with the usage
 limits of **every** account in one sidebar panel — no need to switch accounts
 just to find out how much is left on each.
 
+<img src="https://raw.githubusercontent.com/marivaldojr/codex-accounts/main/docs/screenshot.png"
+     width="380"
+     alt="The Codex Accounts panel: three accounts, each leading with the consumption of its tightest window over rows for every window Codex reports, with the account in use marked.">
+
 ## What it does
 
 - **Activity bar panel** where each account leads with the consumption of its
