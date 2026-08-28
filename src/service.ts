@@ -83,6 +83,7 @@ export class AccountsService {
     }
 
     const profile = await this.store.add(chosen.trim(), auth);
+    await this.store.undismiss(identity.accountId);
     this.onChange();
     void this.refreshOne(profile.id);
     return { ok: true, message: `"${profile.label}" saved.` };
@@ -303,9 +304,21 @@ export class AccountsService {
     if (!isUsableAuth(live)) {
       return;
     }
-    const profile = this.store.findByIdentity(readIdentity(live));
+    const identity = readIdentity(live);
+    const profile = this.store.findByIdentity(identity);
     if (!profile) {
-      return; // Unknown account; the panel already offers to save it.
+      if (this.store.isDismissed(identity.accountId)) {
+        return; // Deleted on purpose; the hint still offers to save it back.
+      }
+      // Signing in is the whole intent — asking the user to then press "save"
+      // is a step that only exists because the extension was not watching.
+      const created = await this.store.add(
+        this.uniqueLabel(identity.email ?? identity.name ?? 'Codex account'),
+        live,
+      );
+      this.onChange();
+      await this.refreshOne(created.id);
+      return;
     }
     const stored = await this.store.getAuth(profile.id);
     if (stored && JSON.stringify(stored) === JSON.stringify(live)) {
@@ -314,6 +327,20 @@ export class AccountsService {
     await this.store.refreshAuth(profile.id, live);
     // Re-read usage so a card left showing "signed out" recovers on its own.
     await this.refreshOne(profile.id);
+  }
+
+  /** Keeps auto-created labels distinct when an account reports no email. */
+  private uniqueLabel(base: string): string {
+    const taken = new Set(this.store.list().map((profile) => profile.label));
+    if (!taken.has(base)) {
+      return base;
+    }
+    for (let suffix = 2; ; suffix++) {
+      const candidate = `${base} (${suffix})`;
+      if (!taken.has(candidate)) {
+        return candidate;
+      }
+    }
   }
 
   /** Whether a profile is the account currently in the live `auth.json`. */
@@ -330,6 +357,9 @@ export class AccountsService {
     }
     this.refreshing = true;
     try {
+      // Reconcile with disk first: a refresh should notice an account that
+      // appeared or changed while the watcher was not looking.
+      await this.adoptLiveAuth();
       const ids = this.store.list().map((profile) => profile.id);
       for (let index = 0; index < ids.length; index += USAGE_CONCURRENCY) {
         const batch = ids.slice(index, index + USAGE_CONCURRENCY);

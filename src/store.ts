@@ -4,6 +4,7 @@ import { readIdentity } from './identity';
 import { CodexAuth, Identity, Profile, UsageSnapshot } from './types';
 
 const PROFILES_KEY = 'codexAccounts.profiles';
+const DISMISSED_KEY = 'codexAccounts.dismissed';
 const SECRET_PREFIX = 'codexAccounts.auth.';
 
 /**
@@ -86,8 +87,43 @@ export class ProfileStore {
   }
 
   async remove(id: string): Promise<void> {
-    await this.save(this.raw().filter((profile) => profile.id !== id));
+    const profile = this.get(id);
+    await this.save(this.raw().filter((item) => item.id !== id));
     await this.context.secrets.delete(this.secretKey(id));
+    // Removing the account that is live would otherwise be undone by the next
+    // reconcile, which auto-saves accounts it does not recognise.
+    if (profile?.accountId) {
+      await this.dismiss(profile.accountId);
+    }
+  }
+
+  /**
+   * Accounts the user deleted on purpose. Auto-save skips these, so a removal
+   * sticks; saving one explicitly is what takes it off the list.
+   */
+  private get dismissed(): string[] {
+    return this.context.globalState.get<string[]>(DISMISSED_KEY, []);
+  }
+
+  isDismissed(accountId: string | undefined): boolean {
+    return Boolean(accountId && this.dismissed.includes(accountId));
+  }
+
+  async dismiss(accountId: string): Promise<void> {
+    if (this.dismissed.includes(accountId)) {
+      return;
+    }
+    await this.context.globalState.update(DISMISSED_KEY, [...this.dismissed, accountId]);
+  }
+
+  async undismiss(accountId: string | undefined): Promise<void> {
+    if (!accountId || !this.dismissed.includes(accountId)) {
+      return;
+    }
+    await this.context.globalState.update(
+      DISMISSED_KEY,
+      this.dismissed.filter((item) => item !== accountId),
+    );
   }
 
   async setUsage(id: string, usage: UsageSnapshot): Promise<void> {

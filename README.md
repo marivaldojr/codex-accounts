@@ -49,9 +49,13 @@ workspaces.
 ## Usage
 
 1. Sign in to an account (`codex login`, or the panel's **Log in** button).
-2. Click **+ Save current account**.
-3. Repeat for the other accounts.
-4. Use **Switch** on a card, and reload the window when the extension asks.
+   It appears in the panel on its own — the extension watches `auth.json` and
+   saves an account it does not recognise, labelled by email.
+2. Repeat for the other accounts.
+3. Press **Use** on a card, and reload the window when the extension asks.
+
+Removing a profile is respected: an account you delete is not auto-saved
+again. Pressing **+ Save current account** is what takes it off that list.
 
 > Codex only picks up the new account after the window reloads. Turn on
 > `codexAccounts.autoReloadAfterSwitch` to skip the prompt.
