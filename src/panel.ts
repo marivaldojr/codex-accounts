@@ -44,6 +44,7 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
         .getConfiguration('codexAccounts')
         .get<number>('warnThresholdPercent', 80),
       refreshing: this.service.isRefreshing,
+      pending: this.service.pendingIds,
     });
   }
 
@@ -102,7 +103,7 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
 <div class="toolbar">
   <button class="save" data-action="saveCurrent">+ Save current account</button>
   <button data-action="login" title="Sign in to another account">Log in</button>
-  <button data-action="refreshAll" title="Check every account">&#8635;</button>
+  <button data-action="refreshAll" title="Check every account"><span>&#8635;</span></button>
 </div>
 <div id="unsaved" class="hint" hidden></div>
 <div id="caption" class="caption" hidden></div>

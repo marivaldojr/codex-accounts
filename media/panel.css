@@ -292,3 +292,36 @@ footer {
   color: var(--faint);
   word-break: break-all;
 }
+
+/* ---------- busy ---------- */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.busy > span {
+  display: inline-block;
+  animation: spin 900ms linear infinite;
+}
+
+/* Both selectors carry the container class on purpose: `.busy:disabled` alone
+   loses to `.toolbar button:disabled`, and the spinner would fade to 40% —
+   which reads as broken rather than working. */
+.toolbar button.busy:disabled,
+.actions button.busy:disabled {
+  opacity: 1;
+  color: var(--vscode-foreground);
+}
+
+/* A spinner is decoration; without it the state still has to be legible, so
+   the button holds a steady dim instead. The card's "checking…" note carries
+   the meaning either way. */
+@media (prefers-reduced-motion: reduce) {
+  .busy > span {
+    animation: none;
+  }
+
+  .busy {
+    opacity: 0.6;
+  }
+}

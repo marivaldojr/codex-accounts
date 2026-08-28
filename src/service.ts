@@ -20,6 +20,8 @@ const SILENT_MESSAGES = new Set(['Canceled.', 'Switch canceled.']);
 
 export class AccountsService {
   private refreshing = false;
+  /** Profiles with a reading in flight, so the panel can say so. */
+  private readonly pending = new Set<string>();
 
   constructor(
     private readonly store: ProfileStore,
@@ -230,24 +232,33 @@ export class AccountsService {
     };
   }
 
-  /** Refreshes the limits for a single profile. */
+  /**
+   * Refreshes the limits for a single profile. Marks the profile as pending
+   * before the call and clears it in `finally`, so a reading that fails or
+   * throws still stops announcing itself as running.
+   */
   async refreshOne(id: string): Promise<void> {
-    const auth = await this.store.getAuth(id);
-    if (!isUsableAuth(auth)) {
-      await this.store.setUsage(id, {
-        fetchedAt: Date.now(),
-        limits: [],
-        error: 'no usable credentials.',
-      });
-      this.onChange();
-      return;
-    }
-    const { snapshot, refreshedAuth } = await fetchUsage(auth, this.clientVersion);
-    if (refreshedAuth) {
-      await this.store.refreshAuth(id, refreshedAuth);
-    }
-    await this.store.setUsage(id, snapshot);
+    this.pending.add(id);
     this.onChange();
+    try {
+      const auth = await this.store.getAuth(id);
+      if (!isUsableAuth(auth)) {
+        await this.store.setUsage(id, {
+          fetchedAt: Date.now(),
+          limits: [],
+          error: 'no usable credentials.',
+        });
+        return;
+      }
+      const { snapshot, refreshedAuth } = await fetchUsage(auth, this.clientVersion);
+      if (refreshedAuth) {
+        await this.store.refreshAuth(id, refreshedAuth);
+      }
+      await this.store.setUsage(id, snapshot);
+    } finally {
+      this.pending.delete(id);
+      this.onChange();
+    }
   }
 
   /** Refreshes every profile, in batches, so N processes do not start at once. */
@@ -269,6 +280,10 @@ export class AccountsService {
 
   get isRefreshing(): boolean {
     return this.refreshing;
+  }
+
+  get pendingIds(): string[] {
+    return [...this.pending];
   }
 
   static isSilent(message: string): boolean {

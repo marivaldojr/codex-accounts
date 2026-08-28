@@ -119,13 +119,16 @@
   }
 
   function button(label, action, id, title, className) {
-    const node = el('button', className, label);
+    const node = el('button', className);
+    // The label lives in a span so the busy state can spin the glyph alone —
+    // rotating the button itself would drag its padding and hover box around.
+    node.append(el('span', null, label));
     node.title = title || label;
     node.addEventListener('click', () => post(action, id));
     return node;
   }
 
-  function accountNode(profile) {
+  function accountNode(profile, busy) {
     const node = el('article', profile.active ? 'account active' : 'account');
 
     const head = el('div', 'account-head');
@@ -171,7 +174,9 @@
       }
     }
 
-    if (usage && usage.error) {
+    if (busy) {
+      node.append(el('div', 'note', 'checking…'));
+    } else if (usage && usage.error) {
       node.append(el('div', 'note error', usage.error));
     } else {
       node.append(el('div', 'note', ago(usage && usage.fetchedAt)));
@@ -183,7 +188,12 @@
     }
     actions.append(button('Window', 'window', profile.id, 'Open a window with its own CODEX_HOME'));
     actions.append(el('span', 'grow'));
-    actions.append(button('↻', 'refreshOne', profile.id, 'Check this account now'));
+    const check = button('↻', 'refreshOne', profile.id, 'Check this account now');
+    if (busy) {
+      check.classList.add('busy');
+      check.disabled = true;
+    }
+    actions.append(check);
     actions.append(button('✎', 'rename', profile.id, 'Rename'));
     actions.append(button('\u{1F5D1}', 'remove', profile.id, 'Remove', 'danger'));
     node.append(actions);
@@ -211,7 +221,8 @@
       return right - left;
     });
 
-    list.replaceChildren(...ordered.map(accountNode));
+    const busy = new Set(state.pending || []);
+    list.replaceChildren(...ordered.map((profile) => accountNode(profile, busy.has(profile.id))));
     empty.hidden = ordered.length > 0;
     caption.hidden = ordered.length < 2;
     caption.textContent = 'least used first';
@@ -225,9 +236,9 @@
 
     home.textContent = state.codexHome;
 
-    for (const node of document.querySelectorAll('.toolbar button')) {
-      node.disabled = state.refreshing && node.dataset.action === 'refreshAll';
-    }
+    const refreshAll = document.querySelector('.toolbar button[data-action="refreshAll"]');
+    refreshAll.disabled = state.refreshing;
+    refreshAll.classList.toggle('busy', state.refreshing);
   }
 
   for (const node of document.querySelectorAll('.toolbar button')) {
