@@ -104,7 +104,7 @@
     } else if (free <= 0) {
       text = reset ? `spent · back in ${reset}` : 'spent';
     } else {
-      text = reset ? `${free}% left · ${reset}` : `${free}% left`;
+      text = reset ? `${window.usedPercent}% used · resets ${reset}` : `${window.usedPercent}% used`;
     }
     row.append(el('span', free <= 0 ? 'v exhausted' : 'v', text));
     return row;
@@ -143,16 +143,15 @@
     const level = severity(free);
 
     const headline = el('div', 'headline');
-    headline.append(el('span', `figure ${level}`, free === null ? '—' : `${free}%`));
-    headline.append(el('span', 'figure-label', free === null ? 'no reading' : 'left'));
+    headline.append(el('span', `figure ${level}`, free === null ? '—' : `${100 - free}%`));
+    headline.append(el('span', 'figure-label', free === null ? 'no reading' : 'used'));
     if (profile.planType) {
       headline.append(el('span', 'plan', profile.planType));
     }
     node.append(headline);
 
-    // The bar fills with what was consumed while the figure states what is left
-    // — the disk-gauge pairing, where a filling track and a "free" label read as
-    // one thing. Colour still follows what remains, so it warns as room runs out.
+    // Figure and bar both read as consumption, so they never disagree. Colour
+    // still keys off what remains, so the bar fills and reddens together.
     const track = el('div', `track ${level}`);
     const fill = el('span');
     fill.style.width = `${free === null ? 0 : 100 - free}%`;
@@ -215,7 +214,7 @@
     list.replaceChildren(...ordered.map(accountNode));
     empty.hidden = ordered.length > 0;
     caption.hidden = ordered.length < 2;
-    caption.textContent = 'most room first';
+    caption.textContent = 'least used first';
 
     if (state.unsaved) {
       unsaved.textContent = `${state.unsaved.email || 'An account'} is signed in but not saved here. Save it before switching, or it is gone.`;

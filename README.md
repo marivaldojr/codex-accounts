@@ -6,9 +6,10 @@ just to find out how much is left on each.
 
 ## What it does
 
-- **Activity bar panel** built around what is *left*, not what was spent: each
-  account leads with the room remaining on its tightest window, and the list is
-  ordered most-room-first — so the account to switch to is the one on top.
+- **Activity bar panel** where each account leads with the consumption of its
+  tightest window — one figure and one bar, both reading the same direction —
+  and the list is ordered least-used-first, so the account to switch to is the
+  one on top.
 - **Per-model limits nested under the account.** Codex reports an account-wide
   limit plus one per model family (Spark, …); the account-wide one drives the
   headline, the families sit below it.
