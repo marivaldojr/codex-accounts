@@ -24,7 +24,11 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
     view.webview.onDidReceiveMessage((message) => void this.handle(message));
     view.onDidChangeVisibility(() => {
       if (view.visible) {
-        this.render();
+        // Second line of defence behind the file watcher: if it did not deliver
+        // (watchers outside the workspace are not guaranteed everywhere),
+        // coming back to the panel still picks up a login. Cheap when idle —
+        // adoptLiveAuth returns early when the file matches what we hold.
+        void this.service.adoptLiveAuth();
       }
     });
     this.render();

@@ -15,6 +15,9 @@ export interface ActionResult {
 /** How many accounts to query at once — each one spawns a `codex` process. */
 const USAGE_CONCURRENCY = 3;
 
+/** Window in which a live-file change is assumed to be our own write. */
+const SELF_WRITE_ECHO_MS = 2000;
+
 /** Messages the panel swallows instead of surfacing as a warning. */
 const SILENT_MESSAGES = new Set(['Canceled.', 'Switch canceled.']);
 
@@ -22,6 +25,8 @@ export class AccountsService {
   private refreshing = false;
   /** Profiles with a reading in flight, so the panel can say so. */
   private readonly pending = new Set<string>();
+  /** When this extension last wrote the live file, to ignore its own echo. */
+  private selfWriteAt = 0;
 
   constructor(
     private readonly store: ProfileStore,
@@ -124,7 +129,7 @@ export class AccountsService {
       }
     }
 
-    await writeAuth(auth);
+    await this.writeLive(auth);
     this.onChange();
     await this.promptReload(profile);
     return { ok: true, message: `Now using "${profile.label}".` };
@@ -265,7 +270,7 @@ export class AccountsService {
         // the one the user's Codex is running on, the live file has to receive
         // the replacement — otherwise checking usage logs them out.
         if (active) {
-          await writeAuth(refreshedAuth);
+          await this.writeLive(refreshedAuth);
         }
       }
       await this.store.setUsage(id, snapshot);
@@ -273,6 +278,42 @@ export class AccountsService {
       this.pending.delete(id);
       this.onChange();
     }
+  }
+
+  /** Every write to the live file goes through here so the watcher can tell
+   *  our own writes from someone else's. */
+  private async writeLive(auth: CodexAuth): Promise<void> {
+    this.selfWriteAt = Date.now();
+    await writeAuth(auth);
+  }
+
+  /**
+   * The live `auth.json` changed underneath us — a `codex login` in a terminal,
+   * a logout, another tool. Redraw at once so the active marker and the
+   * unsaved-account hint are right, and if the account maps to a saved profile,
+   * adopt the file's tokens: after a login they are the current ones, and ours
+   * are the revoked ones.
+   */
+  async adoptLiveAuth(): Promise<void> {
+    if (Date.now() - this.selfWriteAt < SELF_WRITE_ECHO_MS) {
+      return;
+    }
+    this.onChange();
+    const live = readAuth();
+    if (!isUsableAuth(live)) {
+      return;
+    }
+    const profile = this.store.findByIdentity(readIdentity(live));
+    if (!profile) {
+      return; // Unknown account; the panel already offers to save it.
+    }
+    const stored = await this.store.getAuth(profile.id);
+    if (stored && JSON.stringify(stored) === JSON.stringify(live)) {
+      return; // Nothing new on disk — keep this cheap enough to call on a hunch.
+    }
+    await this.store.refreshAuth(profile.id, live);
+    // Re-read usage so a card left showing "signed out" recovers on its own.
+    await this.refreshOne(profile.id);
   }
 
   /** Whether a profile is the account currently in the live `auth.json`. */
