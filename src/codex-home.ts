@@ -58,6 +58,14 @@ export async function writeAuth(auth: CodexAuth, codexHome = resolveCodexHome())
 }
 
 /**
+ * Deletes the active `auth.json`. A missing file is not an error — the caller
+ * wants the credential gone, and it already is.
+ */
+export async function removeAuth(codexHome = resolveCodexHome()): Promise<void> {
+  await fsp.rm(authFilePath(codexHome), { force: true });
+}
+
+/**
  * Creates a throwaway CODEX_HOME holding only the profile's `auth.json`, so one
  * account's limits can be queried without touching the active account. The
  * `codex app-server` may refresh the token in there, so the caller gets the

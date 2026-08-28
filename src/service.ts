@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { resolveCodexCommand } from './cli';
-import { readAuth, resolveCodexHome, writeAuth } from './codex-home';
+import { authFilePath, readAuth, removeAuth, resolveCodexHome, writeAuth } from './codex-home';
 import { isUsableAuth, readIdentity } from './identity';
 import { ProfileStore } from './store';
 import { CodexAuth, Profile, ProfileView } from './types';
@@ -193,14 +193,38 @@ export class AccountsService {
   /**
    * Opens a terminal running `codex login` against the active CODEX_HOME.
    *
-   * Captures the account already signed in first. `codex login` overwrites
+   * Two things happen before the terminal opens, for two different reasons.
+   *
+   * The account already signed in is captured because `codex login` overwrites
    * auth.json, and the tokens it overwrites are the only valid ones that
    * account has — Codex may have rotated them since we last looked, and
-   * rotation revokes whatever copy we were holding. Read the file after the
-   * login and that account is simply gone.
+   * rotation revokes whatever copy we were holding.
+   *
+   * Then the file is deleted, because capturing it is not enough on its own.
+   * The CLI revokes the credential it finds before it starts the new flow: it
+   * posts the stored refresh token to `/oauth/revoke`, which kills the copy we
+   * just captured along with the one on disk. Revocation reads the auth store
+   * and does nothing when it is empty, so clearing the file first is what lets
+   * the previous account survive a login. The app-server login the official
+   * extension drives never had that step — which is why signing in there leaves
+   * the other accounts alone, and signing in here used to not.
    */
   async login(): Promise<ActionResult> {
-    await this.captureLiveAccount();
+    const captured = await this.captureLiveAccount();
+    const saved = captured ? this.store.get(captured.id) : undefined;
+    try {
+      await this.clearLive();
+    } catch (error) {
+      // Worth blocking on only when there is something to lose: going ahead
+      // would revoke the account captured a moment ago.
+      if (saved) {
+        const reason = error instanceof Error ? error.message : String(error);
+        return {
+          ok: false,
+          message: `Could not clear ${authFilePath()} first (${reason}). Signing in now would sign "${saved.label}" out for good.`,
+        };
+      }
+    }
     this.onChange();
     const { command } = resolveCodexCommand();
     const terminal = vscode.window.createTerminal({
@@ -211,7 +235,9 @@ export class AccountsService {
     terminal.sendText(`${command} login`);
     return {
       ok: true,
-      message: 'Once the browser login finishes, use "Save current account".',
+      message: saved
+        ? `Signing in. "${saved.label}" stays saved — press Use on its card to go back to it.`
+        : 'Signing in. The new account appears in the panel on its own.',
     };
   }
 
@@ -296,6 +322,12 @@ export class AccountsService {
   private async writeLive(auth: CodexAuth): Promise<void> {
     this.selfWriteAt = Date.now();
     await writeAuth(auth);
+  }
+
+  /** The delete counterpart of `writeLive`, with the same echo bookkeeping. */
+  private async clearLive(): Promise<void> {
+    this.selfWriteAt = Date.now();
+    await removeAuth();
   }
 
   /**
