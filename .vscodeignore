@@ -8,3 +8,5 @@ tsconfig.json
 **/*.map
 test/**
 docs/**
+media/logo.svg
+media/logo-mark.svg

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Codex Accounts">
+  <defs>
+    <linearGradient id="ca-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1D2430"/>
+      <stop offset="1" stop-color="#0D1117"/>
+    </linearGradient>
+    <linearGradient id="ca-arc" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#5EEAD4"/>
+      <stop offset="1" stop-color="#10A37F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="28" fill="url(#ca-bg)"/>
+
+  <!-- tracks: the full window of each account -->
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="8.5">
+    <circle cx="64" cy="64" r="42"/>
+    <circle cx="64" cy="64" r="30.5"/>
+    <circle cx="64" cy="64" r="19"/>
+  </g>
+
+  <!-- arcs: how much each account has burned, least-used outermost -->
+  <g fill="none" stroke="url(#ca-arc)" stroke-width="8.5" stroke-linecap="round"
+     transform="rotate(-90 64 64)">
+    <circle cx="64" cy="64" r="42"   stroke-dasharray="68.6 263.9"/>
+    <circle cx="64" cy="64" r="30.5" stroke-dasharray="105.4 191.7"/>
+    <circle cx="64" cy="64" r="19"   stroke-dasharray="97.9 119.4"/>
+  </g>
+
+  <!-- the account in use -->
+  <circle cx="64" cy="64" r="6" fill="#F0FDF9"/>
+</svg>
