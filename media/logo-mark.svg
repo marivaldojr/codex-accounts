@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="Codex Accounts">
+  <defs>
+    <linearGradient id="cam-arc" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#5EEAD4"/>
+      <stop offset="1" stop-color="#10A37F"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke="#8A94A6" stroke-opacity="0.28" stroke-width="8.5">
+    <circle cx="48" cy="48" r="42"/>
+    <circle cx="48" cy="48" r="30.5"/>
+    <circle cx="48" cy="48" r="19"/>
+  </g>
+
+  <g fill="none" stroke="url(#cam-arc)" stroke-width="8.5" stroke-linecap="round"
+     transform="rotate(-90 48 48)">
+    <circle cx="48" cy="48" r="42"   stroke-dasharray="68.6 263.9"/>
+    <circle cx="48" cy="48" r="30.5" stroke-dasharray="105.4 191.7"/>
+    <circle cx="48" cy="48" r="19"   stroke-dasharray="97.9 119.4"/>
+  </g>
+
+  <circle cx="48" cy="48" r="6" fill="#10A37F"/>
+</svg>
