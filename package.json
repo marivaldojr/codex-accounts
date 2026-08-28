@@ -2,7 +2,7 @@
   "name": "codex-accounts",
   "displayName": "Codex Accounts",
   "description": "Switch between multiple Codex (ChatGPT) accounts in VS Code, with live rate-limit usage for every account.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "marivaldojr",
   "license": "MIT",
   "engines": {
