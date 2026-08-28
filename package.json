@@ -167,5 +167,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/marivaldojr/codex-accounts"
+  },
+  "homepage": "https://github.com/marivaldojr/codex-accounts#readme",
+  "bugs": {
+    "url": "https://github.com/marivaldojr/codex-accounts/issues"
   }
 }
