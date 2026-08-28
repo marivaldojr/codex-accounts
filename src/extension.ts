@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { resolveCodexHome } from './codex-home';
+import { watchLiveAuth } from './live-auth';
 import { AccountsPanel } from './panel';
 import { AccountsService } from './service';
 import { ProfileStore } from './store';
@@ -7,9 +7,6 @@ import { Profile } from './types';
 
 /** Floor for the poll interval: each cycle spawns one `codex app-server` per profile. */
 const MIN_POLL_SECONDS = 120;
-
-/** A login rewrites `auth.json` more than once; settle before reading it. */
-const LIVE_AUTH_DEBOUNCE_MS = 600;
 
 export function activate(context: vscode.ExtensionContext): void {
   const store = new ProfileStore(context);
@@ -97,25 +94,11 @@ export function activate(context: vscode.ExtensionContext): void {
   // A `codex login` in a terminal, or any other tool, rewrites the live
   // auth.json without telling us. Watch it, so signing in shows up in the panel
   // instead of waiting for someone to press refresh.
-  let watcher: vscode.FileSystemWatcher | undefined;
-  let settle: NodeJS.Timeout | undefined;
-  const watchLiveAuth = (): void => {
-    watcher?.dispose();
-    watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(vscode.Uri.file(resolveCodexHome()), 'auth.json'),
-    );
-    const changed = (): void => {
-      if (settle) {
-        clearTimeout(settle);
-      }
-      settle = setTimeout(() => void service.adoptLiveAuth(), LIVE_AUTH_DEBOUNCE_MS);
-    };
-    watcher.onDidCreate(changed);
-    watcher.onDidChange(changed);
-    watcher.onDidDelete(changed);
-    context.subscriptions.push(watcher);
+  let watcher = watchLiveAuth(() => void service.adoptLiveAuth());
+  const rewatch = (): void => {
+    watcher.dispose();
+    watcher = watchLiveAuth(() => void service.adoptLiveAuth());
   };
-  watchLiveAuth();
 
   // Usage polling. The interval is rescheduled when the setting changes.
   let timer: NodeJS.Timeout | undefined;
@@ -137,7 +120,7 @@ export function activate(context: vscode.ExtensionContext): void {
         schedule();
       }
       if (event.affectsConfiguration('codexAccounts.codexHome')) {
-        watchLiveAuth();
+        rewatch();
       }
       if (event.affectsConfiguration('codexAccounts')) {
         panel?.render();
@@ -148,9 +131,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (timer) {
           clearInterval(timer);
         }
-        if (settle) {
-          clearTimeout(settle);
-        }
+        watcher.dispose();
       },
     },
   );

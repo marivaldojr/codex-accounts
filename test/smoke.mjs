@@ -81,5 +81,40 @@ for (const limit of snapshot.limits) {
   console.log(`       ${limit.limitName ?? limit.limitId}: ` + limit.windows.map(w => `${w.label} ${w.usedPercent}%`).join(' | '));
 }
 
+console.log('\nwatchLiveAuth (throwaway CODEX_HOME, real module)');
+{
+  const fsp = await import('node:fs/promises');
+  const os = await import('node:os');
+  const nodePath = await import('node:path');
+  const { watchLiveAuth } = require('../out/live-auth.js');
+
+  const home = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'codex-accounts-watch-'));
+  const target = nodePath.join(home, 'auth.json');
+  await fsp.writeFile(target, '{"v":0}');
+
+  const previousHome = process.env.CODEX_HOME;
+  process.env.CODEX_HOME = home;
+  let fired = 0;
+  const watcher = watchLiveAuth(() => { fired++; });
+
+  await new Promise((r) => setTimeout(r, 200));
+  // Exactly what an atomic write does — the case a file-bound watch misses.
+  await fsp.writeFile(target + '.tmp', '{"v":1}');
+  await fsp.rename(target + '.tmp', target);
+  await new Promise((r) => setTimeout(r, 1400));
+
+  watcher.dispose();
+  const afterDispose = fired;
+  await fsp.writeFile(target, '{"v":2}');
+  await new Promise((r) => setTimeout(r, 1200));
+
+  check('an atomic rewrite wakes the watcher', () => assert.ok(fired > 0));
+  check('repeated writes collapse into one call', () => assert.equal(fired, 1));
+  check('dispose actually stops it', () => assert.equal(fired, afterDispose));
+
+  await fsp.rm(home, { recursive: true, force: true });
+  if (previousHome === undefined) { delete process.env.CODEX_HOME; } else { process.env.CODEX_HOME = previousHome; }
+}
+
 console.log(failures === 0 ? '\nALL OK' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
