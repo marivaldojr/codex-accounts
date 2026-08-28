@@ -4,6 +4,19 @@ Notable changes to Codex Accounts. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-08-28
+
+### Changed
+
+- **A logo of its own.** Three concentric gauge rings, each filled to a
+  different level, with a dot at the centre for the account in use — the
+  panel's own reading, turned into a mark.
+- **The activity bar icon now speaks the same language.** The silhouette it
+  replaces bore no relation to the marketplace icon or to what the panel
+  shows. VS Code masks this icon and paints it with the theme colour, so the
+  track rings carry their contrast in the alpha channel rather than in a fill.
+- The marketplace icon is regenerated from the same source, at 256×256.
+
 ## [0.1.0] — 2026-08-28
 
 First release.
@@ -65,4 +78,5 @@ First release.
 - Every refresh spawns one `codex app-server` per profile, in batches of three.
   With many accounts, prefer a longer interval.
 
+[0.1.1]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.1
 [0.1.0]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.0
