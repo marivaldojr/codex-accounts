@@ -3,5 +3,5 @@ dist/
 out/
 *.vsix
 
-# resíduo de NTFS ao copiar do Windows para o WSL
+# NTFS leftover from copying Windows files into WSL
 *:Zone.Identifier
