@@ -22,8 +22,9 @@ just to find out how much is left on each.
 - **Isolated usage reads:** each account's limits are queried in a throwaway
   `CODEX_HOME`, so checking usage does **not** switch the active account or
   invalidate a session in progress.
-- **Login** from a terminal (`codex login`) without leaving the editor, with
-  the account you were on saved and kept valid rather than revoked.
+- **Login without leaving the editor**, driven over `codex app-server` — the
+  same path the official extension uses. The account you were on stays saved
+  and valid, and the one you sign in to becomes active.
 
 ## How it works
 
@@ -53,9 +54,11 @@ workspaces.
 
 ## Usage
 
-1. Sign in to an account (`codex login`, or the panel's **Log in** button).
-   It appears in the panel on its own — the extension watches `auth.json` and
-   saves an account it does not recognise, labelled by email.
+1. Sign in to an account with the panel's **Log in** button. The browser opens,
+   and the account becomes the active one when the login finishes. It appears
+   in the panel on its own — the extension watches `auth.json` and saves an
+   account it does not recognise, labelled by email. A `codex login` you run
+   yourself is picked up the same way.
 2. Repeat for the other accounts.
 3. Press **Use** on a card, and reload the window when the extension asks.
 
@@ -100,11 +103,16 @@ again. Pressing **+ Save current account** is what takes it off that list.
 - **A login no longer signs the previous account out.** `codex login` revokes
   the credential it finds before it starts the new flow — it posts the stored
   refresh token to `/oauth/revoke`, so the account you were on dies server-side
-  and the saved copy dies with it. The panel's **Log in** button therefore
-  clears `auth.json` after capturing it: revocation reads the auth store and
-  does nothing when it is empty. The login flow itself is unchanged. (The
-  official extension's own login never had this step, which is why signing in
-  there leaves the other accounts alone.)
+  and the saved copy dies with it. The **Log in** button therefore does not use
+  the CLI: it drives the login over `codex app-server`, which has no such step.
+  Nothing is cleared out of the way, `auth.json` is written only once the new
+  login succeeds, and abandoning the flow leaves the account you were on
+  exactly where it was.
+
+  Where the app-server cannot do it — a Codex old enough to lack the method —
+  it falls back to a terminal running `codex login`, and there `auth.json` is
+  cleared first: revocation reads the auth store and does nothing when it is
+  empty.
 
   What is still outside its reach: an account you have also signed into
   somewhere else (another machine, another `CODEX_HOME`) can be revoked from
