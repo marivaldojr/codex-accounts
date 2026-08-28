@@ -190,8 +190,18 @@ export class AccountsService {
     return { ok: true, message: `"${profile.label}" removed.` };
   }
 
-  /** Opens a terminal running `codex login` against the active CODEX_HOME. */
-  login(): ActionResult {
+  /**
+   * Opens a terminal running `codex login` against the active CODEX_HOME.
+   *
+   * Captures the account already signed in first. `codex login` overwrites
+   * auth.json, and the tokens it overwrites are the only valid ones that
+   * account has — Codex may have rotated them since we last looked, and
+   * rotation revokes whatever copy we were holding. Read the file after the
+   * login and that account is simply gone.
+   */
+  async login(): Promise<ActionResult> {
+    await this.captureLiveAccount();
+    this.onChange();
     const { command } = resolveCodexCommand();
     const terminal = vscode.window.createTerminal({
       name: 'Codex Login',
@@ -289,26 +299,25 @@ export class AccountsService {
   }
 
   /**
-   * The live `auth.json` changed underneath us — a `codex login` in a terminal,
-   * a logout, another tool. Redraw at once so the active marker and the
-   * unsaved-account hint are right, and if the account maps to a saved profile,
-   * adopt the file's tokens: after a login they are the current ones, and ours
-   * are the revoked ones.
+   * Copies whatever account is in the live file into its profile, creating the
+   * profile if this is an account we have not seen. Returns the profile and
+   * whether anything actually changed.
+   *
+   * The tokens on disk are always the current ones — Codex rotates them as the
+   * user works — so this is what keeps a saved copy from decaying into a
+   * revoked one. It deliberately does no network work, so it is cheap enough to
+   * run before anything that is about to overwrite the file.
    */
-  async adoptLiveAuth(): Promise<void> {
-    if (Date.now() - this.selfWriteAt < SELF_WRITE_ECHO_MS) {
-      return;
-    }
-    this.onChange();
+  private async captureLiveAccount(): Promise<{ id: string; changed: boolean } | null> {
     const live = readAuth();
     if (!isUsableAuth(live)) {
-      return;
+      return null;
     }
     const identity = readIdentity(live);
     const profile = this.store.findByIdentity(identity);
     if (!profile) {
       if (this.store.isDismissed(identity.accountId)) {
-        return; // Deleted on purpose; the hint still offers to save it back.
+        return null; // Deleted on purpose; the hint still offers to save it back.
       }
       // Signing in is the whole intent — asking the user to then press "save"
       // is a step that only exists because the extension was not watching.
@@ -316,17 +325,33 @@ export class AccountsService {
         this.uniqueLabel(identity.email ?? identity.name ?? 'Codex account'),
         live,
       );
-      this.onChange();
-      await this.refreshOne(created.id);
-      return;
+      return { id: created.id, changed: true };
     }
     const stored = await this.store.getAuth(profile.id);
     if (stored && JSON.stringify(stored) === JSON.stringify(live)) {
-      return; // Nothing new on disk — keep this cheap enough to call on a hunch.
+      return { id: profile.id, changed: false };
     }
     await this.store.refreshAuth(profile.id, live);
-    // Re-read usage so a card left showing "signed out" recovers on its own.
-    await this.refreshOne(profile.id);
+    return { id: profile.id, changed: true };
+  }
+
+  /**
+   * The live `auth.json` changed underneath us — a `codex login` in a terminal,
+   * a logout, another tool. Redraw at once so the active marker is right, adopt
+   * the file's tokens, and re-read usage so a card left showing "signed out"
+   * recovers without a click.
+   */
+  async adoptLiveAuth(): Promise<void> {
+    if (Date.now() - this.selfWriteAt < SELF_WRITE_ECHO_MS) {
+      return;
+    }
+    this.onChange();
+    const captured = await this.captureLiveAccount();
+    if (!captured || !captured.changed) {
+      return; // Nothing new on disk — keep this cheap enough to call on a hunch.
+    }
+    this.onChange();
+    await this.refreshOne(captured.id);
   }
 
   /** Keeps auto-created labels distinct when an account reports no email. */

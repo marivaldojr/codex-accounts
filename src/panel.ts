@@ -61,7 +61,7 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
       case 'saveCurrent':
         return this.report(await this.service.saveCurrent());
       case 'login':
-        return this.report(this.service.login());
+        return this.report(await this.service.login());
       case 'refreshAll':
         this.render();
         await this.service.refreshAll();

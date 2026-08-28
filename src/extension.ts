@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('codexAccounts.saveCurrent', async () =>
       notify(await service.saveCurrent()),
     ),
-    vscode.commands.registerCommand('codexAccounts.login', () => notify(service.login())),
+    vscode.commands.registerCommand('codexAccounts.login', async () => notify(await service.login())),
     vscode.commands.registerCommand('codexAccounts.refresh', async () => {
       await service.refreshAll();
     }),

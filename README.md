@@ -84,11 +84,18 @@ again. Pressing **+ Save current account** is what takes it off that list.
 - **Only one copy of an account's credentials can be current.** Codex uses OAuth
   refresh-token rotation: every renewal issues a new refresh token and revokes
   the previous one. A profile is a copy of `auth.json`, so whichever copy
-  refreshes last invalidates the others. The extension keeps the live account in
-  sync — it reads and rewrites `$CODEX_HOME/auth.json` directly for whichever
-  account is active — but a saved account you have also signed into elsewhere
-  (another machine, another `CODEX_HOME`) can still go stale. When that happens
-  the card says so and offers a login instead of a switch.
+  refreshes last invalidates the others.
+
+  The extension keeps its copies current from the one place that is always
+  right — the file on disk. It watches `auth.json` and adopts what it finds,
+  reads and rewrites it directly for whichever account is active, and captures
+  the signed-in account before starting a login, since `codex login` overwrites
+  the file and the tokens it overwrites cannot be recovered.
+
+  What is still outside its reach: an account you have also signed into
+  somewhere else (another machine, another `CODEX_HOME`) can be revoked from
+  there. When that happens the card says so and offers a login instead of a
+  switch — switching to dead credentials would only sign you out.
 
 ## Development
 
