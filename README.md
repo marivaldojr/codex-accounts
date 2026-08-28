@@ -12,8 +12,8 @@ just to find out how much is left on each.
 
 - **Activity bar panel** where each account leads with the consumption of its
   tightest window — one figure and one bar, both reading the same direction —
-  and the list is ordered least-used-first, so the account to switch to is the
-  one on top.
+  with the account in use pinned to the top and the rest ordered
+  least-used-first, so the account to switch to is the one right below it.
 - **Per-model limits nested under the account.** Codex reports an account-wide
   limit plus one per model family (Spark, …); the account-wide one drives the
   headline, the families sit below it.

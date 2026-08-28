@@ -3,6 +3,9 @@
   --muted: color-mix(in srgb, var(--vscode-foreground) 55%, transparent);
   --faint: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
   --rule: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+  --edge: color-mix(in srgb, var(--vscode-foreground) 20%, transparent);
+  --edge-hover: color-mix(in srgb, var(--vscode-foreground) 35%, transparent);
+  --surface: color-mix(in srgb, var(--vscode-foreground) 4%, transparent);
   --ok: var(--vscode-charts-green, #3fb950);
   --low: var(--vscode-charts-yellow, #d29922);
   --out: var(--vscode-charts-red, #f85149);
@@ -26,18 +29,22 @@ body {
   padding-bottom: 12px;
 }
 
+/* Every control carries an edge of its own, so a button looks like a button
+   before it is hovered. Ghost buttons were quieter, but on a sidebar the whole
+   panel is read in one glance and floating text does not read as clickable. */
 .toolbar button {
   font: inherit;
   font-size: 11px;
-  padding: 5px 9px;
-  border: 0;
-  border-radius: 4px;
+  padding: 4px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 5px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
 }
 
 .toolbar button:hover {
+  border-color: var(--edge-hover);
   background: color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
   color: var(--vscode-foreground);
 }
@@ -46,7 +53,7 @@ body {
   flex: 1;
   text-align: left;
   color: var(--vscode-foreground);
-  background: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+  background: var(--surface);
 }
 
 .toolbar button:disabled {
@@ -54,20 +61,14 @@ body {
   cursor: default;
 }
 
-/* ---------- caption ---------- */
-
-.caption {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--faint);
-  padding-bottom: 8px;
-}
+/* ---------- hint ---------- */
 
 .hint {
   margin-bottom: 12px;
   padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--low) 30%, transparent);
   border-left: var(--rail) solid var(--low);
+  border-radius: 6px;
   background: color-mix(in srgb, var(--low) 10%, transparent);
   font-size: 11px;
   line-height: 1.5;
@@ -75,25 +76,25 @@ body {
 
 /* ---------- account ---------- */
 
+/* A closed border around each account separates two cards better than a rule
+   between them did: the block reads as one object instead of as the text that
+   happens to sit under a line. */
 .account {
-  position: relative;
-  padding: 10px 0 11px 12px;
-  border-top: 1px solid var(--rule);
+  padding: 10px 12px 11px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
 }
 
-.account::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 11px;
-  width: var(--rail);
-  border-radius: var(--rail);
-  background: var(--faint);
+.account + .account {
+  margin-top: 8px;
 }
 
-.account.active::before {
-  background: var(--ok);
+/* The active card is stated by its own edge, so the left rail that used to
+   carry it is gone — one indicator, not two. */
+.account.active {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  background: color-mix(in srgb, var(--ok) 6%, transparent);
 }
 
 .account-head {
@@ -123,11 +124,16 @@ body {
   white-space: nowrap;
 }
 
+/* A pill, not loose text: it labels the card the way the card's own edge does,
+   and it stops reading as part of the account name next to it. */
 .active-tag {
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 9px;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--ok);
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
 }
 
 
@@ -154,8 +160,8 @@ body {
 
 
 .track {
-  height: 3px;
-  border-radius: 2px;
+  height: 5px;
+  border-radius: 3px;
   background: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
   overflow: hidden;
 }
@@ -163,6 +169,7 @@ body {
 .track > span {
   display: block;
   height: 100%;
+  border-radius: inherit;
   background: var(--ok);
 }
 
@@ -225,25 +232,27 @@ body {
 
 /* ---------- actions ---------- */
 
+/* Bordered buttons sit on their own box, so the row no longer needs to be
+   pulled left to line its text up with the card's edge. */
 .actions {
   display: flex;
-  gap: 2px;
-  padding-top: 7px;
-  margin-left: -6px;
+  gap: 4px;
+  padding-top: 9px;
 }
 
 .actions button {
   font: inherit;
   font-size: 11px;
-  padding: 4px 7px;
-  border: 0;
-  border-radius: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--edge);
+  border-radius: 5px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
 }
 
 .actions button:hover {
+  border-color: var(--edge-hover);
   background: color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
   color: var(--vscode-foreground);
 }
@@ -251,13 +260,15 @@ body {
 /* Switching accounts is the whole point of the panel, so it gets the only
    filled button on the card; everything else stays quiet around it. */
 .actions button.use {
-  padding: 5px 13px;
+  padding: 3px 13px;
   font-weight: 600;
+  border-color: transparent;
   background: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
 }
 
 .actions button.use:hover {
+  border-color: transparent;
   background: var(--vscode-button-hoverBackground);
   color: var(--vscode-button-foreground);
 }
@@ -267,6 +278,7 @@ body {
 }
 
 .actions button.danger:hover {
+  border-color: color-mix(in srgb, var(--out) 45%, transparent);
   background: color-mix(in srgb, var(--out) 18%, transparent);
   color: var(--out);
 }

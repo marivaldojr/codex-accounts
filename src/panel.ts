@@ -110,7 +110,6 @@ export class AccountsPanel implements vscode.WebviewViewProvider {
   <button data-action="refreshAll" title="Check every account"><span>&#8635;</span></button>
 </div>
 <div id="unsaved" class="hint" hidden></div>
-<div id="caption" class="caption" hidden></div>
 <div id="accounts"></div>
 <div id="empty" class="empty" hidden>
   No accounts saved yet.<br>Sign in with <code>codex login</code>, then use <b>Save current account</b>.
