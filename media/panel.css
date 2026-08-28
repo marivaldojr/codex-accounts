@@ -254,8 +254,18 @@ body {
   color: var(--vscode-foreground);
 }
 
+/* Switching accounts is the whole point of the panel, so it gets the only
+   filled button on the card; everything else stays quiet around it. */
 .actions button.use {
-  color: var(--vscode-textLink-foreground);
+  padding: 5px 13px;
+  font-weight: 600;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.actions button.use:hover {
+  background: var(--vscode-button-hoverBackground);
+  color: var(--vscode-button-foreground);
 }
 
 .actions .grow {
