@@ -23,7 +23,11 @@
     return node;
   }
 
-  /** Compact duration from now: "3d 10h", "1h 10m", "12m". */
+  /**
+   * Compact duration from now: "3d 10h", "1h 10m", "12m". It rides in
+   * parentheses next to the clock time, so a zero second unit is dropped —
+   * "3d" earns its place there in a way "3d 0h" does not.
+   */
   function until(unixSeconds) {
     if (!unixSeconds) {
       return null;
@@ -36,12 +40,43 @@
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     if (days > 0) {
-      return `${days}d ${hours}h`;
+      return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
     }
     if (hours > 0) {
-      return `${hours}h ${minutes}m`;
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
     }
     return `${minutes}m`;
+  }
+
+  const clock = (date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  /**
+   * The wall-clock moment the window comes back, which is what a decision is
+   * actually made against ("after lunch" beats "in 3h 40m"). Only the parts
+   * that are not obvious are spelled out: the day is dropped when the reset is
+   * today, and the date replaces the weekday once it is too far out to name.
+   */
+  function at(unixSeconds) {
+    if (!unixSeconds) {
+      return null;
+    }
+    const date = new Date(unixSeconds * 1000);
+    if (unixSeconds * 1000 - Date.now() <= 0) {
+      return 'any moment';
+    }
+    const midnight = new Date();
+    midnight.setHours(0, 0, 0, 0);
+    const days = Math.floor((date - midnight) / 86400000);
+    if (days === 0) {
+      return clock(date);
+    }
+    if (days === 1) {
+      return `tomorrow ${clock(date)}`;
+    }
+    if (days < 7) {
+      return `${date.toLocaleDateString([], { weekday: 'short' })} ${clock(date)}`;
+    }
+    return `${date.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${clock(date)}`;
   }
 
   function ago(timestampMs) {
@@ -96,16 +131,24 @@
     const row = el('li');
     row.append(el('span', 'w', window.label));
     const free = freeOf(window);
-    const reset = until(window.resetsAt);
+    // Both halves of the answer: the clock time to plan against, and how long
+    // that is from now so it does not have to be worked out in the head.
+    const reset = at(window.resetsAt);
+    const left = until(window.resetsAt);
+    const when = reset && left && reset !== 'any moment' ? `${reset} (${left})` : reset;
     let text;
     if (window.usedPercent === 0) {
       text = 'untouched';
     } else if (free <= 0) {
-      text = reset ? `spent · back in ${reset}` : 'spent';
+      text = when ? `spent · back ${when}` : 'spent';
     } else {
-      text = reset ? `${window.usedPercent}% used · resets ${reset}` : `${window.usedPercent}% used`;
+      text = when ? `${window.usedPercent}% used · resets ${when}` : `${window.usedPercent}% used`;
     }
-    row.append(el('span', free <= 0 ? 'v exhausted' : 'v', text));
+    const value = el('span', free <= 0 ? 'v exhausted' : 'v', text);
+    if (window.resetsAt) {
+      value.title = `Resets ${new Date(window.resetsAt * 1000).toLocaleString()}`;
+    }
+    row.append(value);
     return row;
   }
 
