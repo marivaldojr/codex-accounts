@@ -4,6 +4,20 @@ Notable changes to Codex Accounts. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] — 2026-09-18
+
+### Changed
+
+- **The usage rows say when a window comes back, not how long until it does.**
+  A row read `spent · back in 3h 20m`, which is the answer to a question
+  nobody asks: the decision in front of the panel is wait or switch, and it is
+  made against the clock on the wall. It now leads with the moment itself and
+  keeps the countdown beside it — `spent · back 14:30 (3h 20m)`. Only what is
+  not obvious is spelled out: the day is dropped when the reset lands today,
+  the weekday names it inside the week, and the date takes over once it is too
+  far out to name. The clock follows the locale of the editor, and the full
+  date stays on the row's tooltip.
+
 ## [0.1.4] — 2026-08-28
 
 ### Added
@@ -140,6 +154,7 @@ First release.
 - Every refresh spawns one `codex app-server` per profile, in batches of three.
   With many accounts, prefer a longer interval.
 
+[0.1.5]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.5
 [0.1.4]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.4
 [0.1.3]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.3
 [0.1.2]: https://github.com/marivaldojr/codex-accounts/releases/tag/v0.1.2
